@@ -137,8 +137,7 @@ Vagrant.configure("2") do |config|
     v.memory = 512
     v.cpus = 2
   end
-  config.vm.box = "centos/stream8"
-  config.vm.box_version = "20210210.0"
+  config.vm.box = "bento/centos-stream-8"
   config.vm.box_check_update = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.provision "shell", name: "create_file_hosts", inline: $create_file_hosts
