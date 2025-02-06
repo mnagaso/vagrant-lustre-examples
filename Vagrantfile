@@ -31,7 +31,7 @@ $create_repo_lustre_server = <<-SCRIPT
 cat > /etc/yum.repos.d/lustre-server.repo <<EOF
 [lustre-server]
 name=lustre-server
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.14.0/el8.3.2011/server
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server
 gpgcheck=0
 enabled=0
 EOF
@@ -41,7 +41,7 @@ $create_repo_lustre_client = <<-SCRIPT
 cat > /etc/yum.repos.d/lustre-client.repo <<EOF
 [lustre-client]
 name=lustre-client
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.14.0/el8.3.2011/client
+baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/client
 gpgcheck=0
 enabled=0
 EOF
@@ -62,19 +62,25 @@ fi
 SCRIPT
 
 $remove_old_packages_kernel = <<-SCRIPT
-VER="4.18.0-277.el8"
+VER="4.18.0-553.8.1.el8_10"
 yum remove -y kernel-$VER \
 kernel-core-$VER \
 kernel-tools-$VER \
 kernel-tools-lib-$VER
 SCRIPT
 
+# https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
 $install_packages_kernel_patched = <<-SCRIPT
-VER="4.18.0-240.1.1.el8_lustre"
-yum --nogpgcheck --disablerepo=* --enablerepo=lustre-server install -y \
-kernel-$VER \
-kernel-devel-$VER \
-kernel-headers-$VER
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+yum localinstall -y kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
 SCRIPT
 
 $install_packages_server_ldiskfs = <<-SCRIPT
@@ -131,60 +137,69 @@ mkdir /lustre
 mount -t lustre mxs@tcp0:/phoenix /lustre
 SCRIPT
 
+#4.18.0-553.8.1.el8_10.x86_64 for bento/rockylinux-8
+$check_kernel_version = <<-SCRIPT
+echo "Checking kernel version..."
+uname -r
+SCRIPT
+
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
   config.vm.provider "virtualbox" do |v|
-    v.memory = 512
-    v.cpus = 2
+  v.memory = 512
+  v.cpus = 2
   end
-  config.vm.box = "bento/centos-stream-8"
+  #config.vm.box = "bento/centos-stream-8"
+  config.vm.box = "bento/rockylinux-8"
   config.vm.box_check_update = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.provision "shell", name: "check_kernel_version", inline: $check_kernel_version
+
   config.vm.provision "shell", name: "create_file_hosts", inline: $create_file_hosts
 
   config.vm.define  "mxs" do |mxs|
-    mxs.vm.hostname = "mxs"
-    mxs.vm.network "private_network", ip: "192.168.10.10"
-    mxs.vm.disk :disk, size: "10GB", name: "disk_for_lustre"
-    mxs.vm.provision "shell", name: "create_repo_e2fsprogs", inline: $create_repo_e2fsprogs
-    mxs.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
-    mxs.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
-    mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
-    mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
-    mxs.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
-    mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
-    mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
-    mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
-    mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
+  mxs.vm.hostname = "mxs"
+  mxs.vm.network "private_network", ip: "192.168.10.10"
+  mxs.vm.disk :disk, size: "10GB", name: "disk_for_lustre"
+  mxs.vm.provision "shell", name: "create_repo_e2fsprogs", inline: $create_repo_e2fsprogs
+  mxs.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
+  mxs.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
+  mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
+  mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
+  mxs.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
+  mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
+  mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
+  mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
+  mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
   end
 
   config.vm.define  "oss" do |oss|
-    oss.vm.hostname = "oss"
-    oss.vm.network "private_network", ip: "192.168.10.20"
-    oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_1"
-    oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_2"
-    oss.vm.provision "shell", name: "create_repo_e2fsprogs", inline: $create_repo_e2fsprogs
-    oss.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
-    ##oss.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
-    ##oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
-    ##oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
-    ##oss.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
-    ##oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
-    ##oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
-    ##oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
-    ##oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
+  oss.vm.hostname = "oss"
+  oss.vm.network "private_network", ip: "192.168.10.20"
+  oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_1"
+  oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_2"
+  oss.vm.provision "shell", name: "create_repo_e2fsprogs", inline: $create_repo_e2fsprogs
+  oss.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
+  ##oss.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
+  ##oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
+  ##oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
+  ##oss.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
+  ##oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
+  ##oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
+  ##oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
+  ##oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
   end
 
   config.vm.define  "client" do |client|
-    client.vm.hostname = "client"
-    client.vm.network "private_network", ip: "192.168.10.30"
-    client.vm.provision "shell", name: "create_repo_lustre_client", inline: $create_repo_lustre_client
-    client.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
-    ##client.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
-    ##client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
-    ##client.vm.provision "shell", name: "install_packages_dkms", inline: $install_packages_dkms
-    ##client.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
-    ##client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
-    ##client.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
+  client.vm.hostname = "client"
+  client.vm.network "private_network", ip: "192.168.10.30"
+  client.vm.provision "shell", name: "create_repo_lustre_client", inline: $create_repo_lustre_client
+  client.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
+  ##client.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
+  ##client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
+  ##client.vm.provision "shell", name: "install_packages_dkms", inline: $install_packages_dkms
+  ##client.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
+  ##client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
+  ##client.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
   end
 end
