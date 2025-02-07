@@ -10,6 +10,35 @@
 * [lustre](lustre/)
 
 
+## kvm error
+
+If you get the following error message when running `vagrant up`:
+
+```
+There was an error while executing `VBoxManage`, a CLI used by Vagrant
+for controlling VirtualBox. The command and stderr is shown below.
+
+Command: ["startvm", "8c956e5d-a172-420a-876d-20f3c4087736", "--type", "headless"]
+
+Stderr: VBoxManage: error: VirtualBox can't operate in VMX root mode. Please disable the KVM kernel extension, recompile your kernel and reboot (VERR_VMX_IN_VMX_ROOT_MODE)
+VBoxManage: error: Details: code NS_ERROR_FAILURE (0x80004005), component ConsoleWrap, interface IConsole
+```
+
+You can disable the KVM kernel module by running the following command:
+
+```
+sudo modprobe -r kvm_intel
+```
+
+## firewall error
+
+sometimes mounting the shared folder can fail due to firewall rules. If you get the following error message when running `vagrant up`:
+
+```
+sudo systemctl stop firewalld
+```
+
+
 ## Workaround for VirtualBox7.1 
 
 To use virtualbox 7.1, a small modification is necessary until updates of vagrant (as v7.1 is not supported yet.) 
