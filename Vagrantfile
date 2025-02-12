@@ -52,13 +52,23 @@ yum install -y --nogpgcheck --disablerepo=* --enablerepo=e2fsprogs-wc e2fsprogs
 SCRIPT
 
 $install_packages_dkms = <<-SCRIPT
-yum list installed | grep -E "^dkms.*3\.0\.3.*"
-exitCode=$?
-if [ $exitCode -ne 0 ]; then
-    yum install -y https://download-ib01.fedoraproject.org/pub/epel/next/8/Everything/aarch64/Packages/d/dkms-3.0.3-1.el8.next.noarch.rpm
-else
-    echo "Skipping installation of package dkms, since it is already installed."
-fi
+dnf install -y epel-release
+dnf install -y --enablerepo=powertools \
+  libyaml-devel \
+  libmount-devel
+dnf install -y --enablerepo=lustre-client \
+lustre-client-dkms \
+lustre-client
+
+
+#yum list installed | grep -E "^dkms.*3\.0\.3.*"
+#exitCode=$?
+#if [ $exitCode -ne 0 ]; then
+#    #yum install -y https://download-ib01.fedoraproject.org/pub/epel/next/8/Everything/aarch64/Packages/d/dkms-3.0.3-1.el8.next.noarch.rpm
+#    dnf install -y dkms
+#else
+#    echo "Skipping installation of package dkms, since it is already installed."
+#fi
 SCRIPT
 
 
@@ -85,7 +95,7 @@ kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
 rm -f *.rpm
 SCRIPT
 
-# 
+#
 $install_packages_server_ldiskfs = <<-SCRIPT
 yum --nogpgcheck --enablerepo=lustre-server install -y \
 lustre-osd-ldiskfs-mount \
@@ -120,6 +130,7 @@ curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/clien
 yum install --enablerepo=powertools libyaml-devel
 yum localinstall -y kmod-lustre-client-2.15.6-1.el8.x86_64.rpm \
 lustre-client-2.15.6-1.el8.x86_64.rpm
+rm -f *.rpm
 SCRIPT
 
 $disable_selinux = <<-SCRIPT
