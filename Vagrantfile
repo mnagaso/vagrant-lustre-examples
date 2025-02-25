@@ -145,8 +145,10 @@ SCRIPT
 $configure_lustre_server_mgs_mds = <<-SCRIPT
 modprobe -v lnet
 modprobe -v lustre
+#modprobe -v zfs
 mkdir /mnt/mdt
 mkfs.lustre --backfstype=ldiskfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
+#mkfs.lustre --backfstype=zfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
 mount -t lustre /dev/sdb /mnt/mdt
 SCRIPT
 
@@ -166,8 +168,10 @@ mount -t lustre ostpool1/ost1 /lustre/phoenix/ost1
 SCRIPT
 
 $configure_lustre_client = <<-SCRIPT
-mkdir /lustre
+mkdir -p /lustre
 mount -t lustre mxs@tcp0:/phoenix /lustre
+# permission
+chown -R vagrant:vagrant /lustre
 SCRIPT
 
 #4.18.0-553.8.1.el8_10.x86_64 for bento/rockylinux-8
@@ -175,6 +179,29 @@ $check_kernel_version = <<-SCRIPT
 echo "Checking kernel version..."
 uname -r
 SCRIPT
+
+# install test suite
+$install_packages_test_suite_server = <<-SCRIPT
+sudo dnf install -y --enablerepo=lustre-server lustre-devel kmod-lustre-tests lustre-iokit lustre-tests
+SCRIPT
+
+$install_packages_test_suite_client = <<-SCRIPT
+sudo dnf install -y --enablerepo=lustre-client lustre-client-tests
+SCRIPT
+
+$start_lustre_server = <<-SCRIPT
+systemctl stop firewalld
+systemctl disable firewalld
+systemctl start lustre
+SCRIPT
+
+$install_collectl = <<-SCRIPT
+dnf install -y git
+git clone https://github.com/sharkcz/collectl.git
+cd collectl
+sudo ./INSTALL
+SCRIPT
+
 
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
@@ -201,9 +228,13 @@ Vagrant.configure("2") do |config|
   mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   mxs.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
   mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
+  #mxs.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
+  mxs.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
   mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
   mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
+  mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
+  mxs.vm.provision "shell", name: "install_collectl", inline: $install_collectl
   end
 
   config.vm.define  "oss" do |oss|
@@ -218,9 +249,12 @@ Vagrant.configure("2") do |config|
   oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   oss.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
   oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
+  oss.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
   oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
   oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
+  oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
+  oss.vm.provision "shell", name: "install_collectl", inline: $install_collectl
   end
 
   config.vm.define  "client" do |client|
@@ -232,6 +266,7 @@ Vagrant.configure("2") do |config|
   client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
   client.vm.provision "shell", name: "install_packages_dkms", inline: $install_packages_dkms
   client.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
+  client.vm.provision "shell", name: "install_packages_test_suite_client", inline: $install_packages_test_suite_client
   client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   client.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
   end

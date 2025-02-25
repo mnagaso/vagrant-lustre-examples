@@ -63,3 +63,20 @@ Edit /usr/bin/VBox to modify between #### #####
      VBoxSDL|vboxsdl)
          exec "$INSTALL_DIR/VBoxSDL" "$@"
 ```
+
+
+## to get the lustre log with lctl command
+
+on mxs
+```
+vagrant ssh mxs
+lctl get_param md[ts].*.*
+```
+
+on oss
+```
+vagrant ssh oss
+lctl get_param obdfilter.*.*
+```
+
+# to scp files
