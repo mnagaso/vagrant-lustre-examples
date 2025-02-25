@@ -79,4 +79,14 @@ vagrant ssh oss
 lctl get_param obdfilter.*.*
 ```
 
-# to scp files
+## to scp files
+
+instart vagrant-scp plugin
+```
+vagrant plugin install vagrant-scp
+```
+
+then 
+```
+vagrant scp <some_local_file_or_dir> [vm_name]:<somewhere_on_the_vm>
+```
