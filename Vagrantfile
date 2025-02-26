@@ -232,6 +232,7 @@ Vagrant.configure("2") do |config|
     mxs.vm.provision "shell", name: "install_slurm", inline: $install_slurm
     mxs.vm.provision "shell", name: "configure_munge", inline: $configure_munge
     mxs.vm.provision "shell", name: "configure_slurm_controller", inline: $configure_slurm_controller
+    mxs.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
   end
 
   config.vm.define "oss" do |oss|
@@ -253,6 +254,7 @@ Vagrant.configure("2") do |config|
     oss.vm.provision "shell", name: "install_slurm", inline: $install_slurm
     oss.vm.provision "shell", name: "configure_munge", inline: $configure_munge
     oss.vm.provision "shell", name: "configure_slurm_compute", inline: $configure_slurm_compute
+    oss.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
   end
 
   config.vm.define "client" do |client|
@@ -269,5 +271,7 @@ Vagrant.configure("2") do |config|
     client.vm.provision "shell", name: "install_slurm", inline: $install_slurm
     client.vm.provision "shell", name: "configure_munge", inline: $configure_munge
     client.vm.provision "shell", name: "configure_slurm_compute", inline: $configure_slurm_compute
+    client.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
+    client.vm.provision "file", source: "job_script.sh", destination: "/home/vagrant/job_script.sh"
   end
 end
