@@ -68,7 +68,7 @@ yum remove -y kernel-$VER \
 kernel-core-$VER \
 kernel-tools-$VER \
 kernel-tools-lib-$VER \
-kernel-headers-$VER \
+kernel-headers-$VER
 SCRIPT
 
 # https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
@@ -109,7 +109,7 @@ SCRIPT
 
 $install_packages_server_zfs = <<-SCRIPT
 # install zfs
-dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+#dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 dnf install -y https://zfsonlinux.org/epel/zfs-release-2-3$(rpm --eval "%{dist}").noarch.rpm
 dnf install -y kernel-devel
 dnf install -y zfs
