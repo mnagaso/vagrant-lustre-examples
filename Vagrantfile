@@ -42,7 +42,7 @@ EOF
 SCRIPT
 
 $install_packages_common = <<-SCRIPT
-dnf install -y epel-release
+dnf install -y epel-release linux-firmware
 dnf install -y wget curl git vim kernel-devel perl
 dnf install -y --enablerepo=powertools \
   libyaml-devel \
@@ -57,10 +57,6 @@ rm -rf collectl
 SCRIPT
 
 $install_packages_dkms = <<-SCRIPT
-dnf install -y epel-release
-dnf install -y --enablerepo=powertools \
-  libyaml-devel \
-  libmount-devel
 dnf install -y --enablerepo=lustre-client \
 lustre-client-dkms \
 lustre-client
@@ -126,8 +122,8 @@ $install_packages_client = <<-SCRIPT
 #lustre-client-2.15.6-1.el8.x86_64.rpm
 #rm -f *.rpm
 dnf install -y --enablerepo=lustre-client \
-  kmod-lustre-client \
-  lustre-client
+kmod-lustre-client \
+lustre-client
 SCRIPT
 
 $disable_selinux = <<-SCRIPT
@@ -171,7 +167,6 @@ mount -t lustre mxs@tcp0:/phoenix /lustre
 chown -R vagrant:vagrant /lustre
 SCRIPT
 
-#4.18.0-553.8.1.el8_10.x86_64 for bento/rockylinux-8
 $check_kernel_version = <<-SCRIPT
 echo "Checking kernel version..."
 uname -r
@@ -236,7 +231,8 @@ Vagrant.configure("2") do |config|
   mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
   #mxs.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   mxs.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
-  mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
+  mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux #, reboot: true
+  mxs.vm.provision :reload
   mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
   mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
@@ -254,7 +250,8 @@ Vagrant.configure("2") do |config|
   oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   oss.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
-  oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
+  oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux #, reboot: true
+  oss.vm.provision :reload
   oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
   oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
