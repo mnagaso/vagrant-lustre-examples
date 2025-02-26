@@ -17,7 +17,7 @@ $create_file_hosts = <<-SCRIPT
 echo "#{hosts}" > /etc/hosts
 SCRIPT
 
-$create_repo_e2fsprogs = <<-SCRIPT
+$create_repo = <<-SCRIPT
 cat > /etc/yum.repos.d/e2fsprogs-wc.repo <<EOF
 [e2fsprogs-wc]
 name=e2fsprogs-wc
@@ -25,9 +25,6 @@ baseurl=https://downloads.whamcloud.com/public/e2fsprogs/1.47.1.wc2/el8
 gpgcheck=0
 enabled=0
 EOF
-SCRIPT
-
-$create_repo_lustre_server = <<-SCRIPT
 cat > /etc/yum.repos.d/lustre-server.repo <<EOF
 [lustre-server]
 name=lustre-server
@@ -35,9 +32,6 @@ baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/serve
 gpgcheck=0
 enabled=0
 EOF
-SCRIPT
-
-$create_repo_lustre_client = <<-SCRIPT
 cat > /etc/yum.repos.d/lustre-client.repo <<EOF
 [lustre-client]
 name=lustre-client
@@ -47,8 +41,19 @@ enabled=0
 EOF
 SCRIPT
 
-$install_packages_e2fsprogs = <<-SCRIPT
-yum install -y --nogpgcheck --disablerepo=* --enablerepo=e2fsprogs-wc e2fsprogs
+$install_packages_common = <<-SCRIPT
+dnf install -y epel-release
+dnf install -y wget curl git vim kernel-devel perl
+dnf install -y --enablerepo=powertools \
+  libyaml-devel \
+  libmount-devel
+
+# install collectl
+git clone https://github.com/sharkcz/collectl.git
+cd collectl
+sudo ./INSTALL
+cd ..
+rm -rf collectl
 SCRIPT
 
 $install_packages_dkms = <<-SCRIPT
@@ -59,18 +64,7 @@ dnf install -y --enablerepo=powertools \
 dnf install -y --enablerepo=lustre-client \
 lustre-client-dkms \
 lustre-client
-
-
-#yum list installed | grep -E "^dkms.*3\.0\.3.*"
-#exitCode=$?
-#if [ $exitCode -ne 0 ]; then
-#    #yum install -y https://download-ib01.fedoraproject.org/pub/epel/next/8/Everything/aarch64/Packages/d/dkms-3.0.3-1.el8.next.noarch.rpm
-#    dnf install -y dkms
-#else
-#    echo "Skipping installation of package dkms, since it is already installed."
-#fi
 SCRIPT
-
 
 $remove_old_packages_kernel = <<-SCRIPT
 VER="4.18.0-553.8.1.el8_10"
@@ -82,17 +76,27 @@ SCRIPT
 
 # https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
 $install_packages_kernel_patched = <<-SCRIPT
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-yum localinstall -y kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-rm -f *.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+#yum localinstall -y kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+#kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+#kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+#kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+#kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+#rm -f *.rpm
+
+# install kernel
+dnf install -y --nogpgcheck --disablerepo=* --enablerepo=lustre-server \
+  kernel-core \
+  kernel-modules \
+  kernel-devel \
+  kernel-headers
+# install e2fsprogs
+yum install -y --nogpgcheck --disablerepo=* --enablerepo=e2fsprogs-wc \
+  e2fsprogs
 SCRIPT
 
 #
@@ -100,13 +104,6 @@ $install_packages_server_ldiskfs = <<-SCRIPT
 yum --nogpgcheck --enablerepo=lustre-server install -y \
 lustre-osd-ldiskfs-mount \
 lustre
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/lustre-osd-ldiskfs-mount-2.15.6-1.el8.x86_64.rpm
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/lustre-2.15.6-1.el8.x86_64.rpm
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kmod-lustre-2.15.6-1.el8.x86_64.rpm
-#yum localinstall -y kmod-lustre-2.15.6-1.el8.x86_64.rpm
-#yum localinstall -y lustre-osd-ldiskfs-mount-2.15.6-1.el8.x86_64.rpm
-#yum localinstall -y lustre-2.15.6-1.el8.x86_64.rpm
-#rm -f *.rpm
 SCRIPT
 
 #kmod-lustre \
@@ -117,20 +114,20 @@ dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarc
 dnf install -y https://zfsonlinux.org/epel/zfs-release-2-3$(rpm --eval "%{dist}").noarch.rpm
 dnf install -y kernel-devel
 dnf install -y zfs
-
-# install libyaml-devel, libmount-devel
-yum install -y --enablerepo=powertools libyaml-devel libmount-devel
+# install lustre
 sudo dnf --enablerepo=lustre-server install -y lustre-dkms lustre-osd-zfs-mount lustre
 SCRIPT
 
 
 $install_packages_client = <<-SCRIPT
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/client/RPMS/x86_64/kmod-lustre-client-2.15.6-1.el8.x86_64.rpm
-curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/client/RPMS/x86_64/lustre-client-2.15.6-1.el8.x86_64.rpm
-yum install --enablerepo=powertools libyaml-devel
-yum localinstall -y kmod-lustre-client-2.15.6-1.el8.x86_64.rpm \
-lustre-client-2.15.6-1.el8.x86_64.rpm
-rm -f *.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/client/RPMS/x86_64/kmod-lustre-client-2.15.6-1.el8.x86_64.rpm
+#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/client/RPMS/x86_64/lustre-client-2.15.6-1.el8.x86_64.rpm
+#yum localinstall -y kmod-lustre-client-2.15.6-1.el8.x86_64.rpm \
+#lustre-client-2.15.6-1.el8.x86_64.rpm
+#rm -f *.rpm
+dnf install -y --enablerepo=lustre-client \
+  kmod-lustre-client \
+  lustre-client
 SCRIPT
 
 $disable_selinux = <<-SCRIPT
@@ -147,8 +144,8 @@ modprobe -v lnet
 modprobe -v lustre
 #modprobe -v zfs
 mkdir /mnt/mdt
-mkfs.lustre --backfstype=ldiskfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
-#mkfs.lustre --backfstype=zfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
+mkfs.lustre --reformat --backfstype=ldiskfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
+#mkfs.lustre --reformat --backfstype=zfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
 mount -t lustre /dev/sdb /mnt/mdt
 SCRIPT
 
@@ -158,8 +155,8 @@ modprobe -v lustre
 modprobe -v zfs
 zpool create ostpool0 /dev/sdb
 zpool create ostpool1 /dev/sdc
-mkfs.lustre --backfstype=zfs --ost --fsname phoenix --index 0 --mgsnode mxs@tcp0 ostpool0/ost0
-mkfs.lustre --backfstype=zfs --ost --fsname phoenix --index 1 --mgsnode mxs@tcp0 ostpool1/ost1
+mkfs.lustre --reformat --backfstype=zfs --ost --fsname phoenix --index 0 --mgsnode mxs@tcp0 ostpool0/ost0
+mkfs.lustre --reformat --backfstype=zfs --ost --fsname phoenix --index 1 --mgsnode mxs@tcp0 ostpool1/ost1
 mkdir -p /lustre/phoenix/ost0
 mkdir -p /lustre/phoenix/ost1
 # mount below can only be done after mxs is up and running
@@ -192,24 +189,14 @@ SCRIPT
 $start_lustre_server = <<-SCRIPT
 systemctl stop firewalld
 systemctl disable firewalld
+systemctl enable lnet
+systemctl start lnet
+systemctl enable lustre
 systemctl start lustre
-SCRIPT
-
-$install_collectl = <<-SCRIPT
-dnf install -y git
-git clone https://github.com/sharkcz/collectl.git
-cd collectl
-sudo ./INSTALL
-SCRIPT
-
-# install python3.12
-$install_python = <<-SCRIPT
-dnf install -y python3.12
 SCRIPT
 
 # install slurm for all nodes
 $install_slurm = <<-SCRIPT
-dnf install -y epel-release
 dnf install -y slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd munge
 SCRIPT
 
@@ -221,6 +208,7 @@ chmod 400 /etc/munge/munge.key
 scp /etc/munge/munge.key root@oss:/etc/munge/
 systemctl enable --now munge
 SCRIPT
+
 
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
@@ -240,12 +228,11 @@ Vagrant.configure("2") do |config|
   mxs.vm.hostname = "mxs"
   mxs.vm.network "private_network", ip: "192.168.10.10"
   mxs.vm.disk :disk, size: "10GB", name: "disk_for_lustre"
-  mxs.vm.provision "shell", name: "create_repo_e2fsprogs", inline: $create_repo_e2fsprogs
-  mxs.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
-  mxs.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
-  mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
+  mxs.vm.provision "shell", name: "create_repo", inline: $create_repo
+  mxs.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
+  mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
+  mxs.vm.provision :reload
   mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
-  mxs.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
   mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
   #mxs.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   mxs.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
@@ -253,8 +240,6 @@ Vagrant.configure("2") do |config|
   mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
   mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
-  mxs.vm.provision "shell", name: "install_collectl", inline: $install_collectl
-  #mxs.vm.provision "shell", name: "install_python", inline: $install_python
   end
 
   config.vm.define  "oss" do |oss|
@@ -262,34 +247,30 @@ Vagrant.configure("2") do |config|
   oss.vm.network "private_network", ip: "192.168.10.20"
   oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_1"
   oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_2"
-  oss.vm.provision "shell", name: "create_repo_e2fsprogs", inline: $create_repo_e2fsprogs
-  oss.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
-  oss.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
-  oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
+  oss.vm.provision "shell", name: "create_repo", inline: $create_repo
+  oss.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
+  oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
+  oss.vm.provision :reload
   oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
-  oss.vm.provision "shell", name: "install_packages_e2fsprogs", inline: $install_packages_e2fsprogs
   oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   oss.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
   oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux, reboot: true
   oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
   oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
-  oss.vm.provision "shell", name: "install_collectl", inline: $install_collectl
-  #oss.vm.provision "shell", name: "install_python", inline: $install_python
   end
 
   config.vm.define  "client" do |client|
   client.vm.hostname = "client"
   client.vm.network "private_network", ip: "192.168.10.30"
-  client.vm.provision "shell", name: "create_repo_lustre_client", inline: $create_repo_lustre_client
-  client.vm.provision "shell", name: "create_repo_lustre_server", inline: $create_repo_lustre_server
-  client.vm.provision "shell", name: "install_perl", inline: "yum install -y perl"
-  client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched, reboot: true
+  client.vm.provision "shell", name: "create_repo", inline: $create_repo
+  client.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
+  client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
+  client.vm.provision :reload
   client.vm.provision "shell", name: "install_packages_dkms", inline: $install_packages_dkms
   client.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
   client.vm.provision "shell", name: "install_packages_test_suite_client", inline: $install_packages_test_suite_client
   client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   client.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
-  #client.vm.provision "shell", name: "install_python", inline: $install_python
   end
 end
