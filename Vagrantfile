@@ -202,6 +202,25 @@ cd collectl
 sudo ./INSTALL
 SCRIPT
 
+# install python3.12
+$install_python = <<-SCRIPT
+dnf install -y python3.12
+SCRIPT
+
+# install slurm for all nodes
+$install_slurm = <<-SCRIPT
+dnf install -y epel-release
+dnf install -y slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd munge
+SCRIPT
+
+# configure munge authentication for all nodes
+$configure_munge = <<-SCRIPT
+dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key
+chown munge:munge /etc/munge/munge.key
+chmod 400 /etc/munge/munge.key
+scp /etc/munge/munge.key root@oss:/etc/munge/
+systemctl enable --now munge
+SCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
@@ -235,6 +254,7 @@ Vagrant.configure("2") do |config|
   mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
   mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
   mxs.vm.provision "shell", name: "install_collectl", inline: $install_collectl
+  #mxs.vm.provision "shell", name: "install_python", inline: $install_python
   end
 
   config.vm.define  "oss" do |oss|
@@ -255,6 +275,7 @@ Vagrant.configure("2") do |config|
   oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
   oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
   oss.vm.provision "shell", name: "install_collectl", inline: $install_collectl
+  #oss.vm.provision "shell", name: "install_python", inline: $install_python
   end
 
   config.vm.define  "client" do |client|
@@ -269,5 +290,6 @@ Vagrant.configure("2") do |config|
   client.vm.provision "shell", name: "install_packages_test_suite_client", inline: $install_packages_test_suite_client
   client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   client.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
+  #client.vm.provision "shell", name: "install_python", inline: $install_python
   end
 end
