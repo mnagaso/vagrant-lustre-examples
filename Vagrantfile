@@ -56,20 +56,14 @@ cd ..
 rm -rf collectl
 SCRIPT
 
-$install_packages_dkms = <<-SCRIPT
-dnf install -y --enablerepo=lustre-client \
-lustre-client-dkms \
-lustre-client
-SCRIPT
-
-$remove_old_packages_kernel = <<-SCRIPT
-VER="4.18.0-553.8.1.el8_10"
-yum remove -y kernel-$VER \
-kernel-core-$VER \
-kernel-tools-$VER \
-kernel-tools-lib-$VER \
-kernel-headers-$VER
-SCRIPT
+#$remove_old_packages_kernel = <<-SCRIPT
+#VER="4.18.0-553.8.1.el8_10"
+#yum remove -y kernel-$VER \
+#kernel-core-$VER \
+#kernel-tools-$VER \
+#kernel-tools-lib-$VER \
+#kernel-headers-$VER
+#SCRIPT
 
 # https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
 $install_packages_kernel_patched = <<-SCRIPT
@@ -117,6 +111,11 @@ dnf install -y zfs
 sudo dnf --enablerepo=lustre-server install -y lustre-dkms lustre-osd-zfs-mount lustre
 SCRIPT
 
+#$install_packages_dkms = <<-SCRIPT
+#dnf install -y --enablerepo=lustre-client \
+#lustre-client-dkms \
+#lustre-client
+#SCRIPT
 
 $install_packages_client = <<-SCRIPT
 #curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/client/RPMS/x86_64/kmod-lustre-client-2.15.6-1.el8.x86_64.rpm
@@ -126,6 +125,7 @@ $install_packages_client = <<-SCRIPT
 #rm -f *.rpm
 dnf install -y --enablerepo=lustre-client \
 kmod-lustre-client \
+lustre-client-dkms \
 lustre-client
 SCRIPT
 
@@ -228,13 +228,13 @@ Vagrant.configure("2") do |config|
   mxs.vm.disk :disk, size: "10GB", name: "disk_for_lustre"
   mxs.vm.provision "shell", name: "create_repo", inline: $create_repo
   mxs.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
-  mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
+  mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
   mxs.vm.provision :reload
   #mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
   #mxs.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   mxs.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
-  mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux #, reboot: true
+  mxs.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux
   mxs.vm.provision :reload
   mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
@@ -248,12 +248,12 @@ Vagrant.configure("2") do |config|
   oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_2"
   oss.vm.provision "shell", name: "create_repo", inline: $create_repo
   oss.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
-  oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
+  oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
   oss.vm.provision :reload
   #oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   oss.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
-  oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux #, reboot: true
+  oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux
   oss.vm.provision :reload
   oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
   oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
@@ -265,9 +265,9 @@ Vagrant.configure("2") do |config|
   client.vm.network "private_network", ip: "192.168.10.30"
   client.vm.provision "shell", name: "create_repo", inline: $create_repo
   client.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
-  client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
+  client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
   client.vm.provision :reload
-  client.vm.provision "shell", name: "install_packages_dkms", inline: $install_packages_dkms
+#  client.vm.provision "shell", name: "install_packages_dkms", inline: $install_packages_dkms
   client.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
   client.vm.provision "shell", name: "install_packages_test_suite_client", inline: $install_packages_test_suite_client
   client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
