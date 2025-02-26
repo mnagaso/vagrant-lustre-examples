@@ -73,26 +73,26 @@ SCRIPT
 
 # https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
 $install_packages_kernel_patched = <<-SCRIPT
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-#curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-#yum localinstall -y kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-#kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-#kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-#kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
-#kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
-#rm -f *.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+curl -O https://downloads.whamcloud.com/public/lustre/lustre-2.15.6/el8.10/server/RPMS/x86_64/kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+yum localinstall -y kernel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-core-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-modules-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-devel-4.18.0-553.27.1.el8_lustre.x86_64.rpm \
+kernel-headers-4.18.0-553.27.1.el8_lustre.x86_64.rpm
+rm -f *.rpm
 
 # install kernel
-dnf install -y --nogpgcheck --disablerepo=* --enablerepo=lustre-server \
-  kernel-core \
-  kernel-modules \
-  kernel-devel \
-  kernel-headers \
-  kernel-tools \
-  kernel-tools-libs
+#dnf install -y --nogpgcheck --disablerepo=* --enablerepo=lustre-server \
+#  kernel-core \
+#  kernel-modules \
+#  kernel-devel \
+#  kernel-headers \
+#  kernel-tools \
+#  kernel-tools-libs
 # install e2fsprogs
 yum install -y --nogpgcheck --disablerepo=* --enablerepo=e2fsprogs-wc \
   e2fsprogs
@@ -228,9 +228,9 @@ Vagrant.configure("2") do |config|
   mxs.vm.disk :disk, size: "10GB", name: "disk_for_lustre"
   mxs.vm.provision "shell", name: "create_repo", inline: $create_repo
   mxs.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
-  mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
   mxs.vm.provision :reload
+  #mxs.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   mxs.vm.provision "shell", name: "install_packages_ldiskfs", inline: $install_packages_server_ldiskfs
   #mxs.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   mxs.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
@@ -248,9 +248,9 @@ Vagrant.configure("2") do |config|
   oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_2"
   oss.vm.provision "shell", name: "create_repo", inline: $create_repo
   oss.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
-  oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched #, reboot: true
   oss.vm.provision :reload
+  #oss.vm.provision "shell", name: "remove_old_packages_kernel", inline: $remove_old_packages_kernel
   oss.vm.provision "shell", name: "install_packages_zfs", inline: $install_packages_server_zfs
   oss.vm.provision "shell", name: "install_packages_test_suite_server", inline: $install_packages_test_suite_server
   oss.vm.provision "shell", name: "disable_selinux", inline: $disable_selinux #, reboot: true
