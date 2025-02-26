@@ -154,7 +154,8 @@ SCRIPT
 
 # install slurm for all nodes
 $install_slurm = <<-SCRIPT
-dnf install -y libaec slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd munge
+dnf install -y --enablerepo=powertools libaec
+dnf install -y slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd munge
 SCRIPT
 
 # configure munge authentication for all nodes
