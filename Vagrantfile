@@ -207,7 +207,20 @@ Vagrant.configure("2") do |config|
   config.vm.provider "virtualbox" do |v|
     v.memory = 512
     v.cpus = 2
-  end
+    config.vm.provision "shell", inline: <<-SHELL
+    id -u slurm || sudo useradd -m slurm
+    echo "Reloading systemctl daemons..."
+    sudo systemctl daemon-reload
+    echo "Restarting munge..."
+    sudo systemctl restart munge || echo "munge restart failed"
+    echo "Restarting slurmctld..."
+    sudo systemctl restart slurmctld || echo "slurmctld restart failed"
+    echo "Fetching slurmctld service logs (last 20 lines)..."
+    sudo journalctl -u slurmctld --no-pager | tail -n 20
+    echo "Checking /var/log/slurmctld.log if exists..."
+    [ -f /var/log/slurmctld.log ] && sudo cat /var/log/slurmctld.log | tail -n 20 || echo "slurmctld.log file does not exist."
+  SHELL
+end
   config.vm.box = "bento/rockylinux-8"
   config.vm.box_check_update = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
