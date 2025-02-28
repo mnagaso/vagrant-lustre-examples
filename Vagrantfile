@@ -10,7 +10,8 @@ hosts = %q(
 
 192.168.10.10 mxs
 192.168.10.20 oss
-192.168.10.30 client
+192.168.10.30 login
+192.168.10.40 compute1
 )
 
 $create_file_hosts = <<-SCRIPT
@@ -151,56 +152,61 @@ systemctl enable lustre
 systemctl start lustre
 SCRIPT
 
-# install slurm for all nodes
-$install_slurm = <<-SCRIPT
-dnf install -y --enablerepo=powertools \
-  libaec
+# Use this simplified install_slurm instead of the detailed configuration
+$install_slurm_basic = <<-SCRIPT
+# Just install packages but don't configure them
+dnf install -y --enablerepo=powertools libaec
 dnf install -y slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd munge
 SCRIPT
 
-# configure munge authentication for all nodes
-$configure_munge = <<-SCRIPT
-dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key
-chown munge:munge /etc/munge/munge.key
-chmod 400 /etc/munge/munge.key
-scp /etc/munge/munge.key root@oss:/etc/munge/
-scp /etc/munge/munge.key root@client:/etc/munge/
-systemctl enable --now munge
+# Configure login node
+$configure_login_node = <<-SCRIPT
+# Install user environment packages
+dnf install -y vim emacs nano screen tmux environment-modules
+
+# Create example users
+for i in {1..5}; do
+  username="user$i"
+  id -u $username &>/dev/null || useradd -m $username
+  echo "password123" | passwd --stdin $username
+  echo "export SLURM_CONF=/etc/slurm/slurm.conf" >> /home/$username/.bashrc
+done
+
+# Create shared applications directory
+mkdir -p /opt/apps
+chmod 755 /opt/apps
+
+# Create example module file
+mkdir -p /usr/share/modulefiles/example
+cat > /usr/share/modulefiles/example/1.0 <<EOF
+#%Module
+proc ModulesHelp { } {
+  puts stderr "This module sets up the example application environment"
+}
+module-whatis "Example application"
+prepend-path PATH /opt/apps/example/bin
+EOF
+
+echo "Login node setup complete"
 SCRIPT
 
-# configure slurm controller on mxs
-$configure_slurm_controller = <<-SCRIPT
-cat > /etc/slurm/slurm.conf <<EOF
-# Example slurm.conf file
-ClusterName=lustre_cluster
-ControlMachine=mxs
-SlurmdPort=6818
-SlurmctldPort=6817
-AuthType=auth/munge
-StateSaveLocation=/var/spool/slurmctld
-SlurmdSpoolDir=/var/spool/slurmd
-SlurmUser=slurm
-SlurmdUser=root
+# Create a basic job submission script
+$create_job_script = <<-SCRIPT
+cat > /home/vagrant/simple_job.sh <<EOF
+#!/bin/bash
+#SBATCH --job-name=simple_test
+#SBATCH --output=job-%j.out
+#SBATCH --error=job-%j.err
+#SBATCH --ntasks=1
+#SBATCH --time=5:00
+
+echo "Running job on host \$(hostname)"
+sleep 10
+echo "Job completed successfully"
 EOF
-systemctl enable --now slurmctld
+chmod +x /home/vagrant/simple_job.sh
 SCRIPT
 
-# configure slurm compute nodes on oss and client
-$configure_slurm_compute = <<-SCRIPT
-cat > /etc/slurm/slurm.conf <<EOF
-# Example slurm.conf file
-ClusterName=lustre_cluster
-ControlMachine=mxs
-SlurmdPort=6818
-SlurmctldPort=6817
-AuthType=auth/munge
-StateSaveLocation=/var/spool/slurmctld
-SlurmdSpoolDir=/var/spool/slurmd
-SlurmUser=slurm
-SlurmdUser=root
-EOF
-systemctl enable --now slurmd
-SCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
@@ -209,18 +215,8 @@ Vagrant.configure("2") do |config|
     v.cpus = 2
     config.vm.provision "shell", inline: <<-SHELL
     id -u slurm || sudo useradd -m slurm
-    echo "Reloading systemctl daemons..."
-    sudo systemctl daemon-reload
-    echo "Restarting munge..."
-    sudo systemctl restart munge || echo "munge restart failed"
-    echo "Restarting slurmctld..."
-    sudo systemctl restart slurmctld || echo "slurmctld restart failed"
-    echo "Fetching slurmctld service logs (last 20 lines)..."
-    sudo journalctl -u slurmctld --no-pager | tail -n 20
-    echo "Checking /var/log/slurmctld.log if exists..."
-    [ -f /var/log/slurmctld.log ] && sudo cat /var/log/slurmctld.log | tail -n 20 || echo "slurmctld.log file does not exist."
-  SHELL
-end
+    SHELL
+  end
   config.vm.box = "bento/rockylinux-8"
   config.vm.box_check_update = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -243,10 +239,9 @@ end
     mxs.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
     mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
     mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
-    mxs.vm.provision "shell", name: "install_slurm", inline: $install_slurm
-    mxs.vm.provision "shell", name: "configure_munge", inline: $configure_munge
-    mxs.vm.provision "shell", name: "configure_slurm_controller", inline: $configure_slurm_controller
+    mxs.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     mxs.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
+    mxs.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
   config.vm.define "oss" do |oss|
@@ -265,27 +260,44 @@ end
     oss.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
     oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
     oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
-    oss.vm.provision "shell", name: "install_slurm", inline: $install_slurm
-    oss.vm.provision "shell", name: "configure_munge", inline: $configure_munge
-    oss.vm.provision "shell", name: "configure_slurm_compute", inline: $configure_slurm_compute
+    oss.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     oss.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
+    oss.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
-  config.vm.define "client" do |client|
-    client.vm.hostname = "client"
-    client.vm.network "private_network", ip: "192.168.10.30"
-    client.vm.provision "shell", name: "create_repo", inline: $create_repo
-    client.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
-    client.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
-    client.vm.provision :reload
-    client.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
-    client.vm.provision "shell", name: "install_packages_test_suite_client", inline: $install_packages_test_suite_client
-    client.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
-    client.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
-    client.vm.provision "shell", name: "install_slurm", inline: $install_slurm
-    client.vm.provision "shell", name: "configure_munge", inline: $configure_munge
-    client.vm.provision "shell", name: "configure_slurm_compute", inline: $configure_slurm_compute
-    client.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    client.vm.provision "file", source: "job_script.sh", destination: "/home/vagrant/job_script.sh"
+  # Renamed from "client" to "login" to serve as login node
+  config.vm.define "login" do |login|
+    login.vm.hostname = "login"
+    login.vm.network "private_network", ip: "192.168.10.30"
+    login.vm.provision "shell", name: "create_repo", inline: $create_repo
+    login.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
+    login.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
+    login.vm.provision :reload
+    login.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
+    login.vm.provision "shell", name: "install_packages_test_suite_client", inline: $install_packages_test_suite_client
+    login.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
+    login.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
+    login.vm.provision "shell", name: "configure_login_node", inline: $configure_login_node
+    login.vm.provision "shell", name: "create_job_script", inline: $create_job_script
+    login.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
+    login.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
+    login.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
+  end
+
+  # Add a dedicated compute node
+  config.vm.define "compute1" do |compute1|
+    compute1.vm.hostname = "compute1"
+    compute1.vm.network "private_network", ip: "192.168.10.40"
+    compute1.vm.provision "shell", name: "create_repo", inline: $create_repo
+    compute1.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
+    compute1.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
+    compute1.vm.provision :reload
+    compute1.vm.provision "shell", name: "install_packages_client", inline: $install_packages_client
+    compute1.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
+    compute1.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
+    compute1.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
+    compute1.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
+    compute1.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
+
   end
 end
