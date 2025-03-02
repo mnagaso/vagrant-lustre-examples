@@ -97,6 +97,9 @@ if [ "$HOSTNAME" = "mxs" ]; then
     chown -R slurm:slurm /var/spool/slurmctld/state
     chmod 700 /var/spool/slurmctld/state
 
+    # Make sure mail is installed before creating config
+    dnf install -y mailx || true
+
     # Create slurm.conf with corrected configuration
     cat > /etc/slurm/slurm.conf <<EOF
 # SLURM configuration for Lustre cluster
@@ -113,16 +116,16 @@ SlurmctldPort=6817
 SlurmdPort=6818
 ReturnToService=1
 
-# Process tracking - Updated to be more compatible with newer OS
+# Process tracking
 ProctrackType=proctrack/linuxproc
 TaskPlugin=task/none
 
-# Scheduling
+# Scheduling - FIX: Removed CR_Core parameter that's incompatible with select/linear
 SchedulerType=sched/backfill
 SelectType=select/linear
-# FIXED: Removed incompatible SelectTypeParameters=CR_Core
+# NOTE: SelectTypeParameters=CR_Core is removed as it's invalid for select/linear
 
-# Logging - Increased debug levels for troubleshooting
+# Logging
 SlurmctldDebug=debug5
 SlurmdDebug=debug3
 SlurmctldLogFile=/var/log/slurm/slurmctld.log
@@ -133,7 +136,7 @@ DebugFlags=backfill
 JobCompType=jobcomp/none
 AccountingStorageType=accounting_storage/none
 
-# FIXED: Added explicit mail program configuration
+# Mail program configuration
 MailProg=/usr/bin/mail
 
 # Paths and directories
@@ -158,14 +161,15 @@ EOF
 
     chmod 644 /etc/slurm/slurm.conf
 
-    # Make sure mail is installed
-    dnf install -y mailx || true
-
     # Copy configuration to other nodes
     echo "Copying SLURM configuration to other nodes..."
     for node in oss login compute1; do
         echo "  Copying to $node..."
         scp -o StrictHostKeyChecking=no /etc/slurm/slurm.conf root@$node:/etc/slurm/ || echo "  Failed to copy to $node, please copy manually"
+
+        # Restart slurmd on each node to ensure the new config is loaded
+        echo "  Restarting slurmd on $node..."
+        ssh -o StrictHostKeyChecking=no root@$node "systemctl restart slurmd" || echo "  Failed to restart slurmd on $node"
     done
 
     # Start controller service
@@ -191,8 +195,24 @@ EOF
     # Check node status
     echo "Checking node status:"
     sinfo -N || echo "Failed to get node info. Check controller status with 'journalctl -u slurmctld'"
+
+    # Verify the configuration is correct for job submission
+    echo "Testing configuration with test job submission..."
+    sudo -u vagrant bash -c "cd /home/vagrant && sbatch simple_job.sh" || {
+        echo "WARNING: Job submission test failed. Checking configuration issues..."
+        grep -i "SelectType" /etc/slurm/slurm.conf
+    }
 else
-    # On compute nodes, just start slurmd
+    # On compute nodes, make sure we get the latest config
+    echo "Ensuring compute node has the latest configuration..."
+
+    # Quick test for problematic configuration
+    if grep -q "SelectTypeParameters=CR_Core" /etc/slurm/slurm.conf; then
+        echo "WARNING: Found invalid SelectTypeParameters, removing from config..."
+        sed -i '/SelectTypeParameters=CR_Core/d' /etc/slurm/slurm.conf
+    fi
+
+    # Configure compute node
     echo "Configuring SLURM compute node..."
     systemctl stop slurmd || true
 
