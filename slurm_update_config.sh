@@ -7,7 +7,7 @@ echo "==== Configuring SLURM for node: $HOSTNAME ===="
 # Create required directories with proper permissions
 echo "Creating SLURM directories..."
 mkdir -p /var/spool/slurmd
-mkdir -p /var/spool/slurmctld/state  # Added explicit state directory
+mkdir -p /var/spool/slurmctld/state
 mkdir -p /var/log/slurm
 mkdir -p /var/run/slurm
 
@@ -97,7 +97,7 @@ if [ "$HOSTNAME" = "mxs" ]; then
     chown -R slurm:slurm /var/spool/slurmctld/state
     chmod 700 /var/spool/slurmctld/state
 
-    # Create slurm.conf with more complete configuration
+    # Create slurm.conf with corrected configuration
     cat > /etc/slurm/slurm.conf <<EOF
 # SLURM configuration for Lustre cluster
 ClusterName=lustre_cluster
@@ -120,7 +120,7 @@ TaskPlugin=task/none
 # Scheduling
 SchedulerType=sched/backfill
 SelectType=select/linear
-SelectTypeParameters=CR_Core
+# FIXED: Removed incompatible SelectTypeParameters=CR_Core
 
 # Logging - Increased debug levels for troubleshooting
 SlurmctldDebug=debug5
@@ -132,6 +132,9 @@ DebugFlags=backfill
 # Job completion handling
 JobCompType=jobcomp/none
 AccountingStorageType=accounting_storage/none
+
+# FIXED: Added explicit mail program configuration
+MailProg=/usr/bin/mail
 
 # Paths and directories
 SlurmdSpoolDir=/var/spool/slurmd
@@ -155,18 +158,8 @@ EOF
 
     chmod 644 /etc/slurm/slurm.conf
 
-    # Check if port 6817 is already in use
-    echo "Checking if SLURM controller port is available..."
-    if ss -tulpn | grep -q ":6817"; then
-        echo "WARNING: Port 6817 is already in use. SLURM controller may not start properly."
-        echo "Attempting to terminate the process using port 6817..."
-        pid=$(ss -tulpn | grep ":6817" | awk '{print $7}' | cut -d"," -f2 | cut -d"=" -f2)
-        if [ ! -z "$pid" ]; then
-            echo "Killing process $pid using port 6817"
-            kill -9 $pid || true
-            sleep 2
-        fi
-    fi
+    # Make sure mail is installed
+    dnf install -y mailx || true
 
     # Copy configuration to other nodes
     echo "Copying SLURM configuration to other nodes..."
@@ -175,16 +168,12 @@ EOF
         scp -o StrictHostKeyChecking=no /etc/slurm/slurm.conf root@$node:/etc/slurm/ || echo "  Failed to copy to $node, please copy manually"
     done
 
-    # Test configuration first
-    echo "Testing SLURM controller configuration..."
-    sudo -u slurm slurmctld -Dvvc || echo "Configuration test showed warnings, but continuing..."
-
     # Start controller service
     echo "Starting SLURM controller service..."
     systemctl enable slurmctld
     systemctl restart slurmctld
 
-    # Wait for controller to start - give it more time
+    # Wait for controller to start
     echo "Waiting for SLURM controller to start..."
     sleep 10
 
@@ -192,20 +181,14 @@ EOF
     if ! systemctl is-active --quiet slurmctld; then
         echo "ERROR: SLURM controller failed to start. Checking logs:"
         journalctl -u slurmctld --no-pager | tail -n 20
-
-        # Try to get more detailed error information
         echo "Detailed error information from log file:"
         cat /var/log/slurm/slurmctld.log | grep -i "error\|fail\|fatal" | tail -n 20
-
-        # Try running with verbose output for more info
-        echo "Attempting to start slurmctld in verbose mode for diagnostics:"
-        sudo -u slurm slurmctld -Dvvv
     else
         echo "SLURM controller started successfully!"
         systemctl status slurmctld --no-pager
     fi
 
-    # Check node status with better error handling
+    # Check node status
     echo "Checking node status:"
     sinfo -N || echo "Failed to get node info. Check controller status with 'journalctl -u slurmctld'"
 else
@@ -225,14 +208,6 @@ else
     if ! systemctl is-active --quiet slurmd; then
         echo "ERROR: SLURM compute daemon failed to start. Checking logs:"
         journalctl -u slurmd --no-pager | tail -n 20
-
-        # Try to get more detailed error information
-        echo "Detailed error information from log file:"
-        cat /var/log/slurm/slurmd.log | grep -i "error\|fail\|fatal" | tail -n 20
-
-        # Try running with verbose output for more info
-        echo "Attempting to start slurmd in verbose mode for diagnostics:"
-        slurmd -Dvvv
     else
         echo "SLURM compute daemon started successfully!"
         systemctl status slurmd --no-pager
