@@ -1,14 +1,38 @@
 #!/bin/bash
-# Simplified SLURM configuration script
+# Improved SLURM configuration script with robust error handling
 
 HOSTNAME=$(hostname -s)
 echo "==== Configuring SLURM for node: $HOSTNAME ===="
 
+# Setup SSH key for passwordless access (only on controller)
+if [ "$HOSTNAME" = "mxs" ]; then
+    if [ ! -f ~/.ssh/id_rsa ]; then
+        echo "Setting up passwordless SSH..."
+        mkdir -p ~/.ssh
+        ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
+        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+        chmod 600 ~/.ssh/authorized_keys
+
+        # Distribute key to compute nodes (handles password prompt once per node)
+        for node in oss login compute1; do
+            sshpass -p "vagrant" ssh-copy-id -o StrictHostKeyChecking=no root@$node 2>/dev/null || {
+                echo "Could not set up passwordless SSH to $node automatically."
+                echo "You may need to enter password for $node multiple times."
+            }
+        done
+    fi
+fi
+
 # Ensure time synchronization
+echo "Ensuring time synchronization..."
+dnf install -y chrony > /dev/null 2>&1
+systemctl enable chronyd
 systemctl restart chronyd
-chronyc makestep || true
+sleep 2
+chronyc makestep > /dev/null 2>&1
 
 # Create required directories
+echo "Creating SLURM directories..."
 mkdir -p /var/spool/slurmd
 mkdir -p /var/spool/slurmctld/state
 mkdir -p /var/log/slurm
@@ -18,15 +42,20 @@ mkdir -p /var/run/slurm
 chown root:root /var/spool/slurmd
 chmod 755 /var/spool/slurmd
 
-# Configure Munge authentication
+# Configure Munge authentication with robust setup
 echo "Configuring munge authentication..."
+
+# First properly stop any running munge service
+systemctl stop munge > /dev/null 2>&1
+
+# Create and properly set permissions for munge directories
 mkdir -p /var/log/munge
 mkdir -p /var/lib/munge
 mkdir -p /var/run/munge
 chmod 700 /etc/munge
 chmod 711 /var/lib/munge
 chmod 700 /var/log/munge
-chmod 755 /var/run/munge
+chmod 777 /var/run/munge  # Extra permissive for socket creation
 chown -R munge:munge /etc/munge
 chown -R munge:munge /var/lib/munge
 chown -R munge:munge /var/log/munge
@@ -35,18 +64,26 @@ chown -R munge:munge /var/run/munge
 # Controller node specific tasks
 if [ "$HOSTNAME" = "mxs" ]; then
     # Create and distribute munge key
-    systemctl stop munge
+    echo "Creating new munge key..."
     dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key
     chmod 400 /etc/munge/munge.key
     chown munge:munge /etc/munge/munge.key
 
-    # Copy key to other nodes
+    # Copy key to other nodes without password prompt
     echo "Copying munge key to other nodes..."
     for node in oss login compute1; do
         echo "  Copying to $node..."
-        scp -o StrictHostKeyChecking=no /etc/munge/munge.key root@$node:/etc/munge/
-        ssh -o StrictHostKeyChecking=no root@$node "chmod 400 /etc/munge/munge.key; chown munge:munge /etc/munge/munge.key"
-        ssh -o StrictHostKeyChecking=no root@$node "systemctl stop munge"
+        scp -o StrictHostKeyChecking=no -o ConnectTimeout=5 /etc/munge/munge.key root@$node:/etc/munge/ || {
+            echo "  SCP failed, trying another method..."
+            cat /etc/munge/munge.key | ssh -o StrictHostKeyChecking=no root@$node "cat > /etc/munge/munge.key"
+        }
+
+        # Set permissions on remote node
+        ssh -o StrictHostKeyChecking=no root@$node "
+            chmod 400 /etc/munge/munge.key
+            chown munge:munge /etc/munge/munge.key
+            systemctl stop munge
+        "
     done
 fi
 
@@ -54,15 +91,41 @@ fi
 systemctl stop firewalld
 systemctl disable firewalld
 
-# Start munge and wait for socket initialization
+# Start munge with careful socket handling
+echo "Starting munge service..."
 systemctl enable munge
 systemctl restart munge
-sleep 5  # Wait for munge to initialize
+echo "Waiting for munge socket to initialize..."
 
-# Test munge
+# Wait for socket with retry mechanism
+for retry in {1..10}; do
+    sleep 2
+    if [ -S /var/run/munge/munge.socket.2 ]; then
+        echo "Munge socket is ready."
+        break
+    else
+        echo "Waiting for munge socket (attempt $retry/10)..."
+        if [ $retry -eq 5 ]; then
+            echo "Trying to restart munge service..."
+            systemctl restart munge
+        fi
+    fi
+done
+
+# Test munge with better error handling
+echo "Testing munge authentication..."
 if ! munge -n | unmunge; then
-    echo "✗ Munge authentication failed!"
-    exit 1
+    echo "Munge test failed, trying one more restart..."
+    systemctl restart munge
+    sleep 5
+    if ! munge -n | unmunge; then
+        echo "✗ Munge authentication failed!"
+        echo "Checking munge logs:"
+        journalctl -u munge --no-pager | tail -n 10
+        echo "Checking socket directory:"
+        ls -la /var/run/munge/
+        exit 1
+    fi
 fi
 echo "✓ Munge authentication working"
 
@@ -75,9 +138,13 @@ if [ "$HOSTNAME" = "mxs" ]; then
     chown -R slurm:slurm /var/spool/slurmctld
     chown -R slurm:slurm /var/log/slurm
     chown -R slurm:slurm /var/run/slurm
+    chmod 755 /var/spool/slurmctld
+    chmod 755 /var/log/slurm
+    chmod 755 /var/run/slurm
+    chmod 700 /var/spool/slurmctld/state
 
-    # Install mail if needed
-    dnf install -y mailx || true
+    # Install mail
+    dnf install -y mailx > /dev/null 2>&1
 
     # Create slurm.conf
     cat > /etc/slurm/slurm.conf <<EOF
@@ -136,11 +203,14 @@ EOF
 
     chmod 644 /etc/slurm/slurm.conf
 
-    # Copy configuration to other nodes
+    # Copy configuration to other nodes with failover methods
     for node in oss login compute1; do
         echo "  Copying config to $node..."
-        scp -o StrictHostKeyChecking=no /etc/slurm/slurm.conf root@$node:/etc/slurm/
-        ssh -o StrictHostKeyChecking=no root@$node "systemctl restart slurmd"
+        scp -o StrictHostKeyChecking=no /etc/slurm/slurm.conf root@$node:/etc/slurm/ || {
+            echo "  SCP failed, trying another method..."
+            cat /etc/slurm/slurm.conf | ssh -o StrictHostKeyChecking=no root@$node "cat > /etc/slurm/slurm.conf"
+        }
+        ssh -o StrictHostKeyChecking=no root@$node "systemctl restart slurmd" || echo "  Failed to restart slurmd on $node"
     done
 
     # Start controller service
@@ -151,20 +221,26 @@ EOF
     # Check status
     if systemctl is-active --quiet slurmctld; then
         echo "SLURM controller started successfully!"
+        sinfo -N || echo "Failed to get node info"
     else
         echo "ERROR: SLURM controller failed to start"
         journalctl -u slurmctld --no-pager | tail -n 10
     fi
 
-    # Show node status
-    sinfo -N || echo "Failed to get node info"
-
 else
     # Compute node configuration
     echo "Configuring SLURM compute node..."
     systemctl stop slurmd || true
+
+    # Make sure slurm directories exist and have proper permissions
+    mkdir -p /var/spool/slurmd
+    chown root:root /var/spool/slurmd
+    chmod 755 /var/spool/slurmd
+
+    # Start slurmd
     systemctl enable slurmd
     systemctl restart slurmd
+    sleep 2
 
     if systemctl is-active --quiet slurmd; then
         echo "SLURM compute daemon started successfully!"
