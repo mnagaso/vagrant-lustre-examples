@@ -116,11 +116,18 @@ SlurmdPidFile=/var/run/slurm/slurmd.pid
 SlurmUser=slurm
 SlurmdUser=root
 
-# Node definitions - Set non-compute nodes to NOT_IDLE to prevent job scheduling
-NodeName=mxs NodeAddr=192.168.10.10 CPUs=2 RealMemory=400 State=UNKNOWN Features=controller
-NodeName=oss NodeAddr=192.168.10.20 CPUs=2 RealMemory=400 State=UNKNOWN Features=storage
-NodeName=login NodeAddr=192.168.10.30 CPUs=2 RealMemory=400 State=UNKNOWN Features=login
-NodeName=compute1 NodeAddr=192.168.10.40 CPUs=2 RealMemory=400 State=UNKNOWN Features=compute
+# Node configuration - IMPORTANT to match actual hardware
+# Update these values based on your actual hardware
+NodeName=mxs CPUs=2 Boards=1 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=400 State=UNKNOWN
+NodeName=oss CPUs=2 Boards=1 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=400 State=UNKNOWN
+NodeName=login CPUs=2 Boards=1 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=400 State=UNKNOWN
+NodeName=compute1 CPUs=2 Boards=1 SocketsPerBoard=1 CoresPerSocket=2 ThreadsPerCore=1 RealMemory=400 State=UNKNOWN
+
+## Node definitions - Set non-compute nodes to NOT_IDLE to prevent job scheduling
+#NodeName=mxs NodeAddr=192.168.10.10 CPUs=2 RealMemory=400 State=UNKNOWN Features=controller
+#NodeName=oss NodeAddr=192.168.10.20 CPUs=2 RealMemory=400 State=UNKNOWN Features=storage
+#NodeName=login NodeAddr=192.168.10.30 CPUs=2 RealMemory=400 State=UNKNOWN Features=login
+#NodeName=compute1 NodeAddr=192.168.10.40 CPUs=2 RealMemory=400 State=UNKNOWN Features=compute
 
 # Partition definitions - Only include compute1 in the compute partition
 PartitionName=controller Nodes=mxs Default=NO MaxTime=INFINITE State=UP AllowGroups=root
