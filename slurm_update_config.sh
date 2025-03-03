@@ -1,150 +1,76 @@
 #!/bin/bash
-# Improved SLURM configuration script with robust error handling
+# Simplified SLURM configuration script - removes operations already handled in Vagrantfile
 
 HOSTNAME=$(hostname -s)
 echo "==== Configuring SLURM for node: $HOSTNAME ===="
 
-# Setup SSH key for passwordless access (only on controller)
-if [ "$HOSTNAME" = "mxs" ]; then
-    if [ ! -f ~/.ssh/id_rsa ]; then
-        echo "Setting up passwordless SSH..."
-        mkdir -p ~/.ssh
-        ssh-keygen -t rsa -f ~/.ssh/id_rsa -N ""
-        cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-        chmod 600 ~/.ssh/authorized_keys
-
-        # Distribute key to compute nodes (handles password prompt once per node)
-        for node in oss login compute1; do
-            sshpass -p "vagrant" ssh-copy-id -o StrictHostKeyChecking=no root@$node 2>/dev/null || {
-                echo "Could not set up passwordless SSH to $node automatically."
-                echo "You may need to enter password for $node multiple times."
-            }
-        done
-    fi
-fi
-
 # Ensure time synchronization
-echo "Ensuring time synchronization..."
 dnf install -y chrony > /dev/null 2>&1
 systemctl enable chronyd
 systemctl restart chronyd
-sleep 2
-chronyc makestep > /dev/null 2>&1
 
-# Create required directories
-echo "Creating SLURM directories..."
-mkdir -p /var/spool/slurmd
-mkdir -p /var/spool/slurmctld/state
-mkdir -p /var/log/slurm
-mkdir -p /var/run/slurm
+# Define cluster nodes
+CLUSTER_NODES=("oss" "login" "compute1")
 
-# Set basic permissions
-chown root:root /var/spool/slurmd
-chmod 755 /var/spool/slurmd
-
-# Configure Munge authentication with robust setup
-echo "Configuring munge authentication..."
-
-# First properly stop any running munge service
-systemctl stop munge > /dev/null 2>&1
-
-# Create and properly set permissions for munge directories
-mkdir -p /var/log/munge
-mkdir -p /var/lib/munge
-mkdir -p /var/run/munge
-chmod 700 /etc/munge
-chmod 711 /var/lib/munge
-chmod 700 /var/log/munge
-chmod 777 /var/run/munge  # Extra permissive for socket creation
-chown -R munge:munge /etc/munge
-chown -R munge:munge /var/lib/munge
-chown -R munge:munge /var/log/munge
-chown -R munge:munge /var/run/munge
-
-# Controller node specific tasks
+# Controller node specific tasks - only create the munge key on the controller
 if [ "$HOSTNAME" = "mxs" ]; then
-    # Create and distribute munge key
-    echo "Creating new munge key..."
+    # Create munge key
+    echo "Creating munge key on controller..."
     dd if=/dev/urandom bs=1 count=1024 > /etc/munge/munge.key
     chmod 400 /etc/munge/munge.key
     chown munge:munge /etc/munge/munge.key
 
-    # Copy key to other nodes without password prompt
-    echo "Copying munge key to other nodes..."
-    for node in oss login compute1; do
-        echo "  Copying to $node..."
-        scp -o StrictHostKeyChecking=no -o ConnectTimeout=5 /etc/munge/munge.key root@$node:/etc/munge/ || {
-            echo "  SCP failed, trying another method..."
-            cat /etc/munge/munge.key | ssh -o StrictHostKeyChecking=no root@$node "cat > /etc/munge/munge.key"
-        }
+    # Copy munge key to all other nodes
+    echo "Distributing munge key to other nodes..."
+    for NODE in "${CLUSTER_NODES[@]}"; do
+        echo "  - Copying to $NODE..."
+        scp -o StrictHostKeyChecking=no /etc/munge/munge.key ${NODE}:/etc/munge/
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to copy munge key to $NODE"
+            exit 1
+        fi
 
-        # Set permissions on remote node
-        ssh -o StrictHostKeyChecking=no root@$node "
-            chmod 400 /etc/munge/munge.key
-            chown munge:munge /etc/munge/munge.key
-            systemctl stop munge
-        "
+        # Set proper permissions on remote node
+        ssh -o StrictHostKeyChecking=no ${NODE} "chmod 400 /etc/munge/munge.key && chown munge:munge /etc/munge/munge.key"
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to set permissions on $NODE"
+            exit 1
+        fi
     done
+    echo "Munge key distribution complete."
 fi
 
-# Stop firewall
+# Stop firewall (though already handled in Vagrantfile in most cases)
 systemctl stop firewalld
 systemctl disable firewalld
 
-# Start munge with careful socket handling
-echo "Starting munge service..."
+# Ensure munge has proper permissions
+systemctl stop munge > /dev/null 2>&1
+chmod 755 /var/run/munge
+chown munge:munge /var/run/munge
+
+# Start munge service
 systemctl enable munge
 systemctl restart munge
-echo "Waiting for munge socket to initialize..."
+sleep 3
 
-# Wait for socket with retry mechanism
-for retry in {1..10}; do
-    sleep 2
-    if [ -S /var/run/munge/munge.socket.2 ]; then
-        echo "Munge socket is ready."
-        break
-    else
-        echo "Waiting for munge socket (attempt $retry/10)..."
-        if [ $retry -eq 5 ]; then
-            echo "Trying to restart munge service..."
-            systemctl restart munge
-        fi
-    fi
-done
-
-# Test munge with better error handling
-echo "Testing munge authentication..."
-if ! munge -n | unmunge; then
-    echo "Munge test failed, trying one more restart..."
+# Test munge
+munge -n | unmunge || {
+    echo "Munge test failed, restarting service..."
     systemctl restart munge
-    sleep 5
-    if ! munge -n | unmunge; then
-        echo "✗ Munge authentication failed!"
-        echo "Checking munge logs:"
-        journalctl -u munge --no-pager | tail -n 10
-        echo "Checking socket directory:"
-        ls -la /var/run/munge/
-        exit 1
-    fi
-fi
-echo "✓ Munge authentication working"
+    sleep 3
+}
 
 # Configure SLURM based on node role
 if [ "$HOSTNAME" = "mxs" ]; then
     echo "Configuring SLURM controller..."
-    systemctl stop slurmctld || true
+    systemctl stop slurmctld > /dev/null 2>&1
 
-    # Set controller-specific permissions
-    chown -R slurm:slurm /var/spool/slurmctld
-    chown -R slurm:slurm /var/log/slurm
-    chown -R slurm:slurm /var/run/slurm
-    chmod 755 /var/spool/slurmctld
-    chmod 755 /var/log/slurm
-    chmod 755 /var/run/slurm
-    chmod 700 /var/spool/slurmctld/state
-
-    # Install mail
-    dnf install -y mailx > /dev/null 2>&1
+    # Ensure essential directories exist with correct permissions
+    # These should already be created by Vagrantfile, but double-check critical ones
+    mkdir -p /var/spool/slurmctld/state
+    chown slurm:slurm /var/spool/slurmctld/state
+    chmod 755 /var/spool/slurmctld/state
 
     # Create slurm.conf
     cat > /etc/slurm/slurm.conf <<EOF
@@ -171,15 +97,14 @@ SchedulerType=sched/backfill
 SelectType=select/linear
 
 # Logging
-SlurmctldDebug=debug3
-SlurmdDebug=debug3
+SlurmctldDebug=info
+SlurmdDebug=info
 SlurmctldLogFile=/var/log/slurm/slurmctld.log
 SlurmdLogFile=/var/log/slurm/slurmd.log
 
 # Job completion handling
 JobCompType=jobcomp/none
 AccountingStorageType=accounting_storage/none
-MailProg=/usr/bin/mail
 
 # Paths and directories
 SlurmdSpoolDir=/var/spool/slurmd
@@ -191,7 +116,7 @@ SlurmdPidFile=/var/run/slurm/slurmd.pid
 SlurmUser=slurm
 SlurmdUser=root
 
-# Node definitions with explicit IP addresses
+# Node definitions
 NodeName=mxs NodeAddr=192.168.10.10 CPUs=2 RealMemory=400 State=UNKNOWN
 NodeName=oss NodeAddr=192.168.10.20 CPUs=2 RealMemory=400 State=UNKNOWN
 NodeName=login NodeAddr=192.168.10.30 CPUs=2 RealMemory=400 State=UNKNOWN
@@ -203,51 +128,33 @@ EOF
 
     chmod 644 /etc/slurm/slurm.conf
 
-    # Copy configuration to other nodes with failover methods
-    for node in oss login compute1; do
-        echo "  Copying config to $node..."
-        scp -o StrictHostKeyChecking=no /etc/slurm/slurm.conf root@$node:/etc/slurm/ || {
-            echo "  SCP failed, trying another method..."
-            cat /etc/slurm/slurm.conf | ssh -o StrictHostKeyChecking=no root@$node "cat > /etc/slurm/slurm.conf"
-        }
-        ssh -o StrictHostKeyChecking=no root@$node "systemctl restart slurmd" || echo "  Failed to restart slurmd on $node"
+    # Copy slurm.conf to all compute nodes
+    for NODE in "${CLUSTER_NODES[@]}"; do
+        echo "Copying slurm.conf to $NODE..."
+        scp -o StrictHostKeyChecking=no /etc/slurm/slurm.conf ${NODE}:/etc/slurm/
+        if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to copy slurm.conf to $NODE"
+        fi
     done
 
     # Start controller service
     systemctl enable slurmctld
     systemctl restart slurmctld
-    sleep 10
-
-    # Check status
-    if systemctl is-active --quiet slurmctld; then
-        echo "SLURM controller started successfully!"
-        sinfo -N || echo "Failed to get node info"
-    else
-        echo "ERROR: SLURM controller failed to start"
-        journalctl -u slurmctld --no-pager | tail -n 10
-    fi
+    sleep 3
 
 else
     # Compute node configuration
     echo "Configuring SLURM compute node..."
-    systemctl stop slurmd || true
+    systemctl stop slurmd > /dev/null 2>&1
 
-    # Make sure slurm directories exist and have proper permissions
+    # Ensure spool directory exists with proper permissions
     mkdir -p /var/spool/slurmd
-    chown root:root /var/spool/slurmd
+    chown slurm:slurm /var/spool/slurmd
     chmod 755 /var/spool/slurmd
 
     # Start slurmd
     systemctl enable slurmd
     systemctl restart slurmd
-    sleep 2
-
-    if systemctl is-active --quiet slurmd; then
-        echo "SLURM compute daemon started successfully!"
-    else
-        echo "ERROR: SLURM compute daemon failed to start"
-        journalctl -u slurmd --no-pager | tail -n 10
-    fi
 fi
 
 echo "SLURM configuration complete on $(hostname)."
