@@ -177,6 +177,52 @@ dnf install -y --enablerepo=powertools libaec
 dnf install -y slurm slurm-slurmd slurm-slurmctld slurm-slurmdbd munge
 SCRIPT
 
+# Add this script after your other script definitions, before the Vagrant.configure block
+$create_slurm_environment = <<-SCRIPT
+echo "==== Creating SLURM environment ===="
+
+# Create required users
+echo "Creating munge and slurm users..."
+id -u munge &>/dev/null || useradd -r -m munge
+id -u slurm &>/dev/null || useradd -r -m slurm
+
+# Create required directories
+echo "Creating SLURM directories..."
+mkdir -p /var/spool/slurmd
+mkdir -p /var/spool/slurmctld/state
+mkdir -p /var/log/slurm
+mkdir -p /var/run/slurm
+
+# Set up munge directories
+echo "Creating munge directories..."
+mkdir -p /var/log/munge
+mkdir -p /var/lib/munge
+mkdir -p /var/run/munge
+
+# Set directory permissions
+echo "Setting directory permissions..."
+chown root:root /var/spool/slurmd
+chmod 755 /var/spool/slurmd
+
+chown slurm:slurm /var/spool/slurmctld
+chown slurm:slurm /var/log/slurm
+chown slurm:slurm /var/run/slurm
+chmod 755 /var/spool/slurmctld
+chmod 755 /var/log/slurm
+chmod 755 /var/run/slurm
+
+chmod 700 /etc/munge
+chmod 711 /var/lib/munge
+chmod 700 /var/log/munge
+chmod 755 /var/run/munge
+chown -R munge:munge /etc/munge
+chown -R munge:munge /var/lib/munge
+chown -R munge:munge /var/log/munge
+chown -R munge:munge /var/run/munge
+
+echo "SLURM environment setup complete."
+SCRIPT
+
 # Configure login node
 $configure_login_node = <<-SCRIPT
 # Install user environment packages
@@ -231,9 +277,6 @@ Vagrant.configure("2") do |config|
   config.vm.provider "virtualbox" do |v|
     v.memory = 512
     v.cpus = 2
-    config.vm.provision "shell", inline: <<-SHELL
-    id -u slurm || sudo useradd -m slurm
-    SHELL
   end
   config.vm.box = "bento/rockylinux-8"
   config.vm.box_check_update = false
@@ -258,8 +301,9 @@ Vagrant.configure("2") do |config|
     mxs.vm.provision "shell", name: "configure_mgs_mds", inline: $configure_lustre_server_mgs_mds
     mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
     mxs.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
+    mxs.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     mxs.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    mxs.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
+    #mxs.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
   config.vm.define "oss" do |oss|
@@ -279,8 +323,9 @@ Vagrant.configure("2") do |config|
     oss.vm.provision "shell", name: "configure_oss", inline: $configure_lustre_server_oss_zfs
     oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
     oss.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
+    oss.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     oss.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    oss.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
+    #oss.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
   # Renamed from "client" to "login" to serve as login node
@@ -298,8 +343,9 @@ Vagrant.configure("2") do |config|
     login.vm.provision "shell", name: "configure_login_node", inline: $configure_login_node
     login.vm.provision "shell", name: "create_job_script", inline: $create_job_script
     login.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
+    login.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     login.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    login.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
+    #login.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
   # Add a dedicated compute node
@@ -314,8 +360,9 @@ Vagrant.configure("2") do |config|
     compute1.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
     compute1.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
     compute1.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
+    compute1.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     compute1.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    compute1.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
+    #compute1.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
 
   end
 end
