@@ -116,14 +116,17 @@ SlurmdPidFile=/var/run/slurm/slurmd.pid
 SlurmUser=slurm
 SlurmdUser=root
 
-# Node definitions
-NodeName=mxs NodeAddr=192.168.10.10 CPUs=2 RealMemory=400 State=UNKNOWN
-NodeName=oss NodeAddr=192.168.10.20 CPUs=2 RealMemory=400 State=UNKNOWN
-NodeName=login NodeAddr=192.168.10.30 CPUs=2 RealMemory=400 State=UNKNOWN
-NodeName=compute1 NodeAddr=192.168.10.40 CPUs=2 RealMemory=400 State=UNKNOWN
+# Node definitions - Set non-compute nodes to NOT_IDLE to prevent job scheduling
+NodeName=mxs NodeAddr=192.168.10.10 CPUs=2 RealMemory=400 State=UNKNOWN Features=controller
+NodeName=oss NodeAddr=192.168.10.20 CPUs=2 RealMemory=400 State=UNKNOWN Features=storage
+NodeName=login NodeAddr=192.168.10.30 CPUs=2 RealMemory=400 State=UNKNOWN Features=login
+NodeName=compute1 NodeAddr=192.168.10.40 CPUs=2 RealMemory=400 State=UNKNOWN Features=compute
 
-# Partition definitions
-PartitionName=debug Nodes=mxs,oss,login,compute1 Default=YES MaxTime=INFINITE State=UP
+# Partition definitions - Only include compute1 in the compute partition
+PartitionName=controller Nodes=mxs Default=NO MaxTime=INFINITE State=UP AllowGroups=root
+PartitionName=storage Nodes=oss Default=NO MaxTime=INFINITE State=UP AllowGroups=root
+PartitionName=login Nodes=login Default=NO MaxTime=INFINITE State=UP AllowGroups=root
+PartitionName=compute Nodes=compute1 Default=YES MaxTime=INFINITE State=UP
 EOF
 
     chmod 644 /etc/slurm/slurm.conf
