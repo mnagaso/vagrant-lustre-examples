@@ -256,7 +256,7 @@ SCRIPT
 
 # Create a basic job submission script
 $create_job_script = <<-SCRIPT
-cat > /home/vagrant/simple_job.sh <<EOF
+cat > /lustre/vagrant/simple_job.sh <<EOF
 #!/bin/bash
 #SBATCH --job-name=simple_test
 #SBATCH --output=job-%j.out
@@ -268,9 +268,23 @@ echo "Running job on host \$(hostname)"
 sleep 10
 echo "Job completed successfully"
 EOF
-chmod +x /home/vagrant/simple_job.sh
+chmod +x /lustre/vagrant/simple_job.sh
 SCRIPT
 
+
+$create_user_dirs = <<-SCRIPT
+for user in vagrant user1 user2 user3 user4 user5; do
+  dir="/lustre/${user}"
+  if [ ! -d "$dir" ]; then
+    echo "Creating directory $dir"
+    mkdir -p "$dir"
+    chown "$user:$user" "$dir"
+  else
+    echo "Directory $dir already exists."
+  fi
+done
+echo "User directories creation completed."
+SCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
@@ -303,7 +317,6 @@ Vagrant.configure("2") do |config|
     mxs.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     mxs.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     mxs.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    #mxs.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
   config.vm.define "oss" do |oss|
@@ -325,7 +338,6 @@ Vagrant.configure("2") do |config|
     oss.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     oss.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     oss.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    #oss.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
   end
 
   # Renamed from "client" to "login" to serve as login node
@@ -341,12 +353,12 @@ Vagrant.configure("2") do |config|
     login.vm.provision "shell", name: "configure_lnet", inline: $configure_lnet
     login.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
     login.vm.provision "shell", name: "configure_login_node", inline: $configure_login_node
-    login.vm.provision "shell", name: "create_job_script", inline: $create_job_script
     login.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     login.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
+    login.vm.provision "shell", name: "create_user_dirs", inline: $create_user_dirs
+    login.vm.provision "shell", name: "create_job_script", inline: $create_job_script
     login.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    #login.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
-  end
+end
 
   # Add a dedicated compute node
   config.vm.define "compute1" do |compute1|
@@ -362,7 +374,5 @@ Vagrant.configure("2") do |config|
     compute1.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     compute1.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     compute1.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
-    #compute1.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh"
-
   end
 end
