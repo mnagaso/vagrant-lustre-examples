@@ -5,9 +5,6 @@
 #SBATCH --ntasks=1
 #SBATCH --time=00:10:00
 
-# Load SLURM modules if needed
-module load slurm
-
 # Define Lustre mount point and test file name
 LUSTRE_MOUNT="/lustre"
 TEST_FILE="${LUSTRE_MOUNT}/lustre_test_$(date +%s).bin"
