@@ -67,6 +67,8 @@ vagrant ssh mxs -c "sinfo"
 #echo "Testing munge authentication between nodes..."
 #vagrant ssh mxs -c "munge -n | ssh login unmunge" && echo "Munge authentication is working correctly!" || echo "Munge authentication failed!"
 
+echo "Setting jobid_var for Lustre to enable job accounting."
+vagrant ssh mxs -c "sudo lctl set_param -P jobid_var=SLURM_JOB_ID"
 
 # scp ./fefssv.py and ./fefssv_v2.py to all nodes
 for NODE in "${NODES[@]}"; do
