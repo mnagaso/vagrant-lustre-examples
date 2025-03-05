@@ -70,6 +70,9 @@ vagrant ssh mxs -c "sinfo"
 echo "Setting jobid_var for Lustre to enable job accounting."
 vagrant ssh mxs -c "sudo lctl set_param -P jobid_var=SLURM_JOB_ID"
 
+# check jovid_var on login
+vagrant ssh login -c "sudo lctl get_param jobid_var"
+
 # scp ./fefssv.py and ./fefssv_v2.py to all nodes
 for NODE in "${NODES[@]}"; do
     echo "Copying fefssv.py and fefssv_v2.py to $NODE..."
