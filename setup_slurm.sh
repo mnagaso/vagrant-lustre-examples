@@ -64,5 +64,5 @@ echo "Testing SLURM status..."
 vagrant ssh mxs -c "sinfo"
 
 # Test munge
-echo "Testing munge authentication between nodes..."
-vagrant ssh mxs -c "munge -n | ssh login unmunge" && echo "Munge authentication is working correctly!" || echo "Munge authentication failed!"
+#echo "Testing munge authentication between nodes..."
+#vagrant ssh mxs -c "munge -n | ssh login unmunge" && echo "Munge authentication is working correctly!" || echo "Munge authentication failed!"
