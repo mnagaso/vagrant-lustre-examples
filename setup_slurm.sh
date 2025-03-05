@@ -74,3 +74,7 @@ for NODE in "${NODES[@]}"; do
     vagrant scp ./fefssv.py ${NODE}:~/
     vagrant scp ./fefssv_v2.py ${NODE}:~/
 done
+
+# scp ./job_samples/*.sh to login node
+echo "Copying job samples to login node..."
+vagrant scp ./job_samples/*.sh login:/lustre/vagrant/
