@@ -316,7 +316,6 @@ Vagrant.configure("2") do |config|
     mxs.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
     mxs.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     mxs.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
-    mxs.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
   end
 
   config.vm.define "oss" do |oss|
@@ -337,7 +336,6 @@ Vagrant.configure("2") do |config|
     oss.vm.provision "shell", name: "start_lustre_server", inline: $start_lustre_server
     oss.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     oss.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
-    oss.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
   end
 
   # Renamed from "client" to "login" to serve as login node
@@ -357,7 +355,6 @@ Vagrant.configure("2") do |config|
     login.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     login.vm.provision "shell", name: "create_user_dirs", inline: $create_user_dirs
     login.vm.provision "shell", name: "create_job_script", inline: $create_job_script
-    login.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
 end
 
   # Add a dedicated compute node
@@ -373,6 +370,5 @@ end
     compute1.vm.provision "shell", name: "configure_client", inline: $configure_lustre_client
     compute1.vm.provision "shell", name: "install_slurm_basic", inline: $install_slurm_basic
     compute1.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
-    compute1.vm.provision "file", source: "fefssv_copy.py", destination: "/home/vagrant/fefssv_copy.py"
   end
 end
