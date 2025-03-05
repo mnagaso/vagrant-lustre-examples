@@ -1,2 +1,5 @@
 .vagrant
 *.yml
+
+# Ignore munge key for security
+munge.key

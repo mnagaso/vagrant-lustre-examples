@@ -1,23 +1,68 @@
+#!/bin/bash
+
+# Check for vagrant-scp plugin
 if ! vagrant plugin list | grep -q vagrant-scp; then
     echo "vagrant-scp plugin not installed. Installing now..."
     vagrant plugin install vagrant-scp
 fi
 
-vagrant scp ./slurm_update_config.sh mxs:~/
-vagrant scp ./slurm_update_config.sh oss:~/
-vagrant scp ./slurm_update_config.sh login:~/
-vagrant scp ./slurm_update_config.sh compute1:~/
+# Generate munge key if it doesn't exist
+if [ ! -f "./munge.key" ]; then
+    echo "Munge key not found. Generating a new one..."
+    bash ./create_munge_key.sh
+    if [ $? -ne 0 ]; then
+        echo "Failed to create munge key. Exiting."
+        exit 1
+    fi
+fi
 
-# fix permission
-vagrant ssh mxs -c "sudo chmod 755 /var/run/munge"
-vagrant ssh oss -c "sudo chmod 755 /var/run/munge"
-vagrant ssh login -c "sudo chmod 755 /var/run/munge"
-vagrant ssh compute1 -c "sudo chmod 755 /var/run/munge"
+# Define nodes
+NODES=("mxs" "oss" "login" "compute1")
 
-# First on mxs (controller)
-vagrant ssh mxs -c "sudo bash /home/vagrant/slurm_update_config.sh"
+# Copy configuration script to all nodes
+echo "Copying configuration script to all nodes..."
+for NODE in "${NODES[@]}"; do
+    vagrant scp ./slurm_update_config.sh ${NODE}:~/
+done
 
-# Then on each compute node (in new terminal tabs/windows)
-vagrant ssh oss -c "sudo bash /home/vagrant/slurm_update_config.sh"
-vagrant ssh login -c "sudo bash /home/vagrant/slurm_update_config.sh"
-vagrant ssh compute1 -c "sudo bash /home/vagrant/slurm_update_config.sh"
+# Copy slurm.conf to all nodes
+echo "Copying slurm.conf to all nodes..."
+for NODE in "${NODES[@]}"; do
+    vagrant scp ./slurm.conf ${NODE}:~/
+    vagrant ssh ${NODE} -c "sudo cp ~/slurm.conf /etc/slurm/slurm.conf && sudo chmod 644 /etc/slurm/slurm.conf"
+done
+
+# Copy munge key to all nodes
+echo "Copying munge.key to all nodes..."
+for NODE in "${NODES[@]}"; do
+    echo "  - Copying to $NODE..."
+    vagrant scp ./munge.key ${NODE}:~/
+    vagrant ssh ${NODE} -c "sudo cp ~/munge.key /etc/munge/munge.key && sudo chmod 400 /etc/munge/munge.key && sudo chown munge:munge /etc/munge/munge.key"
+    if [ $? -ne 0 ]; then
+        echo "ERROR: Failed to copy or set permissions on munge key for $NODE"
+        exit 1
+    fi
+done
+
+# Fix permissions for munge
+echo "Fixing munge permissions on all nodes..."
+for NODE in "${NODES[@]}"; do
+    vagrant ssh ${NODE} -c "sudo chmod 755 /var/run/munge"
+done
+
+# Configure all nodes with the updated slurm_update_config.sh script
+echo "Configuring all nodes..."
+for NODE in "${NODES[@]}"; do
+    echo "Configuring $NODE..."
+    vagrant ssh ${NODE} -c "sudo bash /home/vagrant/slurm_update_config.sh"
+done
+
+echo "SLURM configuration completed on all nodes"
+
+# Test SLURM status
+echo "Testing SLURM status..."
+vagrant ssh mxs -c "sinfo"
+
+# Test munge
+echo "Testing munge authentication between nodes..."
+vagrant ssh mxs -c "munge -n | ssh login unmunge" && echo "Munge authentication is working correctly!" || echo "Munge authentication failed!"
