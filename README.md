@@ -14,97 +14,45 @@ This repository provides a Vagrant configuration for setting up a 3-node Lustre 
    ```bash
    vagrant up
    ```
-
-2. SSH into the controller node:
+2. setup slurm
    ```bash
+   ./setup_slurm.sh
+   ```
+
+3. run slurm job
+   ```bash
+   vagrant ssh login
+   cd /lustre/vagrant
+   sbatch lustre_test_job.sh
+   Ctrl+D # exit ssh
+   ```
+
+4. check the result
+
+   on mxs
+   ```
    vagrant ssh mxs
+   lctl get_param md[ts].*.*
    ```
 
-3. Use the unified Slurm management script:
-   ```bash
-   sudo bash /home/vagrant/slurm_manager.sh
+   on oss
+   ```
+   vagrant ssh oss
+   lctl get_param obdfilter.*.*
    ```
 
-## Slurm Management Script
+## to scp files
 
-The `slurm_manager.sh` script provides a unified interface for managing Slurm:
-
-- Quick Fix (Run All Repairs)
-- Show Slurm Status
-- Show Logs
-- Fix Network Configuration
-- Fix Munge Authentication
-- Update Slurm Configuration
-- Distribute Configuration to Compute Nodes
-- Start/Restart Controller or Compute Nodes
-
-### Usage
-
-Interactive mode:
-```bash
-sudo bash slurm_manager.sh
-```
-
-Command-line mode:
-```bash
-sudo bash slurm_manager.sh [option-number]
-```
-
-Example:
-```bash
-sudo bash slurm_manager.sh 1  # Run quick fix
-```
-
-## Common Slurm Issues & Solutions
-
-### "Unable to contact slurm controller (connect failure)"
-
-This indicates a network connectivity or controller issue:
-
-1. Verify the controller is running:
-   ```bash
-   sudo systemctl status slurmctld
+   instart vagrant-scp plugin
+   ```
+   vagrant plugin install vagrant-scp
+   ```
+   
+   then 
+   ```
+   vagrant scp <some_local_file_or_dir> [vm_name]:<somewhere_on_the_vm>
    ```
 
-2. Check network connectivity:
-   ```bash
-   ping mxs
-   ```
-
-3. Verify firewall is disabled:
-   ```bash
-   sudo systemctl status firewalld
-   ```
-
-4. Check that Munge authentication is working:
-   ```bash
-   munge -n | unmunge
-   ```
-
-5. Use the Slurm manager script to fix issues:
-   ```bash
-   sudo bash slurm_manager.sh 1
-   ```
-
-## Running Jobs
-
-Once Slurm is working properly, you can submit jobs:
-
-```bash
-sinfo                    # Check partition and node status
-srun -N1 hostname        # Run a simple job
-sbatch job_script.sh     # Submit a batch job
-squeue                   # Check job queue
-```
-
-## Troubleshooting
-
-If you encounter issues, use the Slurm manager script to diagnose and fix problems:
-
-```bash
-sudo bash slurm_manager.sh 2  # Show current Slurm status
-sudo bash slurm_manager.sh 3  # Show logs
-```
 
 ## Prerequisites
 
@@ -171,28 +119,3 @@ Edit /usr/bin/VBox to modify between #### #####
 ```
 
 
-## to get the lustre log with lctl command
-
-on mxs
-```
-vagrant ssh mxs
-lctl get_param md[ts].*.*
-```
-
-on oss
-```
-vagrant ssh oss
-lctl get_param obdfilter.*.*
-```
-
-## to scp files
-
-instart vagrant-scp plugin
-```
-vagrant plugin install vagrant-scp
-```
-
-then 
-```
-vagrant scp <some_local_file_or_dir> [vm_name]:<somewhere_on_the_vm>
-```
