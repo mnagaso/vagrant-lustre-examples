@@ -55,5 +55,9 @@ systemctl restart slurmd
 echo "Verifying Slurm accounting configuration..."
 sacct -o JobID,JobName,MaxRSS,MaxDiskRead,MaxDiskWrite
 
-echo "Slurm and Lustre integration script completed successfully."
+echo "Setting jobid_var for Lustre to enable job accounting."
+if [ "$(hostname)" = "mxs" ]; then
+    lctl set_param -P jobid_var=SLURM_JOB_ID
+fi
 
+echo "Slurm and Lustre integration script completed successfully."
