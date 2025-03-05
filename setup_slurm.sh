@@ -66,3 +66,11 @@ vagrant ssh mxs -c "sinfo"
 # Test munge
 #echo "Testing munge authentication between nodes..."
 #vagrant ssh mxs -c "munge -n | ssh login unmunge" && echo "Munge authentication is working correctly!" || echo "Munge authentication failed!"
+
+
+# scp ./fefssv.py and ./fefssv_v2.py to all nodes
+for NODE in "${NODES[@]}"; do
+    echo "Copying fefssv.py and fefssv_v2.py to $NODE..."
+    vagrant scp ./fefssv.py ${NODE}:~/
+    vagrant scp ./fefssv_v2.py ${NODE}:~/
+done
