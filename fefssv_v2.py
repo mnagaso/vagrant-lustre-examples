@@ -85,6 +85,7 @@ class Fefssv:
         if not m:
             return
         dt = m.group(1)
+        volname = "all"
 
         # Check for volume header indicating volume name.
         vol_match = re.search(r"\S+\.(\S+\-\S+)\.job_stats", dt)
