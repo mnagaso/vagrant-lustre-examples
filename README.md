@@ -80,7 +80,7 @@ Instructs collectl to load an external module. In this case:
    or on oss
    ``` bash
    vagrant ssh oss
-   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 import ~/fefssv.ph,ost=phoenix-MDT0000,v
+   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 import ~/fefssv.ph,ost=phoenix-OST0000,v
    ```
 
 ## to activate compute1 node
