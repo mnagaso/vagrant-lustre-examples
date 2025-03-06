@@ -39,12 +39,59 @@ This repository provides a Vagrant configuration for setting up a 3-node Lustre 
    ```
    vagrant ssh oss
    lctl get_param obdfilter.*.*
+   ``
+
+## use the original perl code "fefssv.ph"
+   on mxs
+   ``` bash
+   vagrant ssh mxs
+   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 import ~/fefssv.ph,mdt=phoenix-MDT0000,v
+   ```
+   
+   below is the explanation of the command [manual](https://linux.die.net/man/1/collectl)
+
+   - `-f tmp`
+This is the name of a file to write the output to
+
+   - `-r00:00,30`
+When selected, collectl runs indefinately (or at least until the system reboots). The maximum number of raw and/or plot files that will be retained (older ones are automatically deleted) is controlled by the days field, the default is 7. When -m is also specified to direct collectl to write messages to a log file in the logging directory, the number of months to retain those logs is controlled by the months field and its default is 12. The increment field which is also optional (but is position dependent) specifies the duration of an individual collection file in minutes the default of which is 1440 or 1 day.
+
+   - `-m`
+Write status to a monthly log file in the same directory as the output file (requires -f to be specified as well). The name of the file will be collectl-yyyymm.log and will track various messages that may get generated during every run of collectl.
+
+   - `-F60`
+Flush output buffers after this number of seconds. 
+
+   - `-s+YZ`
+This field controls which subsystem data is to be collected or played back for. 
+X - Interconnect
+Y - Slabs (system object caches)
+
+   - `-i10:60:300` interval[:interval2[:interval3]]
+
+This is the sampling interval in seconds. The default is 10 seconds when run as a daemon and 1 second otherwise. The process subsystem and slabs (-sY and -sZ) are sampled at the lower rate of interval2. Environmentals (-sE), which only apply to a subset of hardware, are sampled at interval3. Both interval2 and interval3, if specified, must be an even multiple of interval1. The daemon default is -i10:60:300 and all other modes are -i1:60:300. To sample only processes once every 10 seconds use -i:10.
+
+   - `import ~/fefssv.ph,mdt=phoenix-MDT0000,v`
+Instructs collectl to load an external module. In this case:
+      - ~/fefssv.ph is the Perl module file.
+      - mdt=phoenix-MDT0000 passes a parameter to the module (it tells the script which MDT to monitor).
+      - The trailing v might tell the module to run in verbose mode (or it could be setting another module-specific option).
+
+   or on oss
+   ``` bash
+   vagrant ssh oss
+   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 import ~/fefssv.ph,ost=phoenix-MDT0000,v
+   ```
+
+## to activate compute1 node
+   ``` bash
+   vagrant ssh mxs -c "sudo scontrol update NodeName=compute1 State=RESUME"
    ```
 
 ## to scp files
 
    instart vagrant-scp plugin
-   ```
+   ``` bash
    vagrant plugin install vagrant-scp
    ```
    
