@@ -1,6 +1,16 @@
 # Slurm on Lustre Vagrant Cluster
 
-This repository provides a Vagrant configuration for setting up a 3-node Lustre cluster with Slurm workload manager.
+This repository provides a Vagrant configuration for setting up a 4-node Lustre cluster with Slurm workload manager.
+
+![image](imgs/vms_setup.png)
+
+
+## Prerequisites
+
+* [Vagrant](https://www.vagrantup.com/)    
+* [VirtualBox](https://www.virtualbox.org/)
+
+
 
 ## Cluster Layout
 
@@ -27,19 +37,24 @@ This repository provides a Vagrant configuration for setting up a 3-node Lustre 
    Ctrl+D # exit ssh
    ```
 
-4. check the result
+4. check the lustre's log
 
    on mxs
    ```
    vagrant ssh mxs
-   lctl get_param md[ts].*.*
+   lctl get_param md[ts].phoenix-MDT0000.*
+   or
+   lctl get_param md[ts].phoenix-MDT0000.job_stats
    ```
 
    on oss
    ```
    vagrant ssh oss
    lctl get_param obdfilter.*.*
-   ``
+   or 
+   lctl get_param obdfilter.phoenix-OST0000.job_stats
+   lctl get_param obdfilter.phoenix-OST0001.job_stats
+  ```
 
 ## use the original perl code "fefssv.ph"
    on mxs
@@ -100,11 +115,6 @@ Instructs collectl to load an external module. In this case:
    vagrant scp <some_local_file_or_dir> [vm_name]:<somewhere_on_the_vm>
    ```
 
-
-## Prerequisites
-
-* [Vagrant](https://www.vagrantup.com/)     - Version tested: 2.2.14
-* [VirtualBox](https://www.virtualbox.org/) - Version tested: 6.1.30
 
 ## Examples
 
