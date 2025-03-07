@@ -27,12 +27,12 @@ echo "Copying fefssv.ph to OSS node..."
 vagrant scp fefssv.ph oss:/home/vagrant/
 
 echo "Starting collectl on MXS node..."
-vagrant ssh mxs -c "sudo collectl -f tmp -r$START_TIME,10 -m -F60 -s+YZ -i10:60:300 import ~/fefssv.ph,mdt=phoenix-MDT0000,v" &
+vagrant ssh mxs -c "sudo collectl -f tmp -r$START_TIME,10 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,mdt=phoenix-MDT0000,v" &
 MXS_PID=$!
 echo "MXS collectl started with process ID: $MXS_PID"
 
 echo "Starting collectl on OSS node..."
-vagrant ssh oss -c "sudo collectl -f tmp -r$START_TIME,10 -m -F60 -s+YZ -i10:60:300 import ~/fefssv.ph,ost=phoenix-OST0000,v" &
+vagrant ssh oss -c "sudo collectl -f tmp -r$START_TIME,10 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,ost=phoenix-OST0000,v" &
 OSS_PID=$!
 echo "OSS collectl started with process ID: $OSS_PID"
 
