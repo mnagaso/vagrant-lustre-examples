@@ -1,6 +1,17 @@
 # Slurm on Lustre Vagrant Cluster
 
 This repository provides a Vagrant configuration for setting up a 4-node Lustre cluster with Slurm workload manager.
+The cluster consists of:
+- 1 MDS/MGS server (mxs), which also acts as the Slurm controller
+- 2 OSS servers (oss)
+- 1 Client (login)
+- 1 Slurm compute node (compute1)
+
+In Vagrantfile, Lustre is installed and configured on all nodes.
+Slurm is also installed in Vagrantfile, but not configured.
+As configuration Slurm requires that the all nodes are up and running, the Slurm configuration is done in a separate script `setup_slurm.sh` which is run after the Vagrant cluster is up.
+The Lustre file system is mounted on the client and compute node at `/lustre/vagrant`.
+
 
 ![image](imgs/vms_setup.png)
 
