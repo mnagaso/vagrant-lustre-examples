@@ -342,6 +342,9 @@ Vagrant.configure("2") do |config|
   config.vm.define "login" do |login|
     login.vm.hostname = "login"
     login.vm.network "private_network", ip: "192.168.10.30"
+    # The following line maps guest port 3000 to host port 3000,
+    # allowing external access to the Next.js server running on the VM.
+    login.vm.network :forwarded_port, guest: 3000, host: 3000
     login.vm.provision "shell", name: "create_repo", inline: $create_repo
     login.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
     login.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
