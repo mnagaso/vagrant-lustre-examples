@@ -19,6 +19,7 @@
 - **Node Version:** Always use node23 for consistency across the project.
 - **Styling:** Use Tailwind CSS for designing UI components.
 - **Framework:** Use Next.js for the web application with app router (both frontend and backend).
+- **Deployment:** Use Docker for containerization and always do docker build and docker run commands in iib_app directory.
 
 ### Use Cases
 

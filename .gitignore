@@ -3,3 +3,7 @@
 
 # Ignore munge key for security
 munge.key
+
+# app
+iib_app/.next
+iib_app/node_modules
