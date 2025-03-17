@@ -53,9 +53,9 @@ The Lustre file system is mounted on the client and compute node at `/lustre/vag
    on mxs
    ```
    vagrant ssh mxs
-   lctl get_param md[ts].phoenix-MDT0000.*
+   lctl get_param md[ts].testhpc-MDT0000.*
    or
-   lctl get_param md[ts].phoenix-MDT0000.job_stats
+   lctl get_param md[ts].testhpc-MDT0000.job_stats
    ```
 
    on oss
@@ -63,15 +63,15 @@ The Lustre file system is mounted on the client and compute node at `/lustre/vag
    vagrant ssh oss
    lctl get_param obdfilter.*.*
    or 
-   lctl get_param obdfilter.phoenix-OST0000.job_stats
-   lctl get_param obdfilter.phoenix-OST0001.job_stats
+   lctl get_param obdfilter.testhpc-OST0000.job_stats
+   lctl get_param obdfilter.testhpc-OST0001.job_stats
   ```
 
 ## use the original perl code "fefssv.ph"
    on mxs
    ``` bash
    vagrant ssh mxs
-   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,mdt=phoenix-MDT0000,v
+   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,mdt=testhpc-MDT0000,v
    ```
    
    below is the explanation of the command [manual](https://linux.die.net/man/1/collectl)
@@ -97,16 +97,16 @@ Y - Slabs (system object caches)
 
 This is the sampling interval in seconds. The default is 10 seconds when run as a daemon and 1 second otherwise. The process subsystem and slabs (-sY and -sZ) are sampled at the lower rate of interval2. Environmentals (-sE), which only apply to a subset of hardware, are sampled at interval3. Both interval2 and interval3, if specified, must be an even multiple of interval1. The daemon default is -i10:60:300 and all other modes are -i1:60:300. To sample only processes once every 10 seconds use -i:10.
 
-   - `import ~/fefssv.ph,mdt=phoenix-MDT0000,v`
+   - `import ~/fefssv.ph,mdt=testhpc-MDT0000,v`
 Instructs collectl to load an external module. In this case:
       - ~/fefssv.ph is the Perl module file.
-      - mdt=phoenix-MDT0000 passes a parameter to the module (it tells the script which MDT to monitor).
+      - mdt=testhpc-MDT0000 passes a parameter to the module (it tells the script which MDT to monitor).
       - The trailing v might tell the module to run in verbose mode (or it could be setting another module-specific option).
 
    or on oss
    ``` bash
    vagrant ssh oss
-   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,ost=phoenix-OST0000,v
+   sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,ost=testhpc-OST0000,v
    ```
 
 ## to activate compute1 node

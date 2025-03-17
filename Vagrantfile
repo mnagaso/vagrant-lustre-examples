@@ -106,7 +106,7 @@ $configure_lustre_server_mgs_mds = <<-SCRIPT
 modprobe -v lnet
 modprobe -v lustre
 mkdir /mnt/mdt
-mkfs.lustre --reformat --backfstype=ldiskfs --fsname=phoenix --mgs --mdt --index=0 /dev/sdb
+mkfs.lustre --reformat --backfstype=ldiskfs --fsname=testhpc --mgs --mdt --index=0 /dev/sdb
 mount -t lustre /dev/sdb /mnt/mdt
 SCRIPT
 
@@ -116,11 +116,11 @@ modprobe -v lustre
 modprobe -v zfs
 
 # Check if mounts exist and unmount them
-if mountpoint -q /lustre/phoenix/ost0; then
-  umount -f /lustre/phoenix/ost0
+if mountpoint -q /lustre/testhpc/ost0; then
+  umount -f /lustre/testhpc/ost0
 fi
-if mountpoint -q /lustre/phoenix/ost1; then
-  umount -f /lustre/phoenix/ost1
+if mountpoint -q /lustre/testhpc/ost1; then
+  umount -f /lustre/testhpc/ost1
 fi
 
 # Destroy existing ZFS pools if they exist
@@ -134,17 +134,17 @@ fi
 # Now create the pools and OSTs
 zpool create ostpool0 /dev/sdb
 zpool create ostpool1 /dev/sdc
-mkfs.lustre --reformat --backfstype=zfs --ost --fsname phoenix --index 0 --mgsnode mxs@tcp0 ostpool0/ost0
-mkfs.lustre --reformat --backfstype=zfs --ost --fsname phoenix --index 1 --mgsnode mxs@tcp0 ostpool1/ost1
-mkdir -p /lustre/phoenix/ost0
-mkdir -p /lustre/phoenix/ost1
-mount -t lustre ostpool0/ost0 /lustre/phoenix/ost0
-mount -t lustre ostpool1/ost1 /lustre/phoenix/ost1
+mkfs.lustre --reformat --backfstype=zfs --ost --fsname testhpc --index 0 --mgsnode mxs@tcp0 ostpool0/ost0
+mkfs.lustre --reformat --backfstype=zfs --ost --fsname testhpc --index 1 --mgsnode mxs@tcp0 ostpool1/ost1
+mkdir -p /lustre/testhpc/ost0
+mkdir -p /lustre/testhpc/ost1
+mount -t lustre ostpool0/ost0 /lustre/testhpc/ost0
+mount -t lustre ostpool1/ost1 /lustre/testhpc/ost1
 SCRIPT
 
 $configure_lustre_client = <<-SCRIPT
 mkdir -p /lustre
-mount -t lustre mxs@tcp0:/phoenix /lustre
+mount -t lustre mxs@tcp0:/testhpc /lustre
 chown -R vagrant:vagrant /lustre
 SCRIPT
 
