@@ -73,13 +73,6 @@ vagrant ssh mxs -c "sudo lctl set_param -P jobid_var=SLURM_JOB_ID"
 # check jovid_var on login
 vagrant ssh login -c "sudo lctl get_param jobid_var"
 
-# scp ./fefssv.py and ./fefssv_v2.py to all nodes
-for NODE in "${NODES[@]}"; do
-    echo "Copying fefssv.py and fefssv_v2.py to $NODE..."
-    vagrant scp ./fefssv.py ${NODE}:~/
-    vagrant scp ./fefssv_v2.py ${NODE}:~/
-done
-
 # scp ./job_samples/*.sh to login node
 echo "Copying job samples to login node..."
 vagrant scp ./job_samples/*.sh login:/lustre/vagrant/
