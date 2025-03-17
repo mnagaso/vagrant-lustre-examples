@@ -2,11 +2,11 @@
 # Ensure the script is executed from its own directory
 cd "$(dirname "$0")"
 
-echo "Creating /home/vagrant/iib_app on login node..."
-vagrant ssh login -c "mkdir -p /home/vagrant/iib_app"
+echo "erase iib_app on login node if it exists..."
+vagrant ssh login -c "rm -rf /home/vagrant/iib_app"
 
-echo "Copying Dockerfile to login node..."
-vagrant scp Dockerfile login:/home/vagrant/iib_app/Dockerfile
+echo "Copying iib_app to login node..."
+vagrant scp ../iib_app login:/home/vagrant/
 
 echo "Checking Docker installation on Vagrant VM (machine: 'login')..."
 vagrant ssh login -c "
@@ -26,3 +26,5 @@ fi
 echo 'Docker is installed and running. Building Docker image...'
 cd /home/vagrant/iib_app && sudo docker build -t iib_app . && sudo docker run -d -p 3000:3000 iib_app
 "
+
+echo "Deployment complete! Application should be running at http://192.168.10.30:3000"

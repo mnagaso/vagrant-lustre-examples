@@ -9,12 +9,16 @@
     - Slurm control daemon is installed on the MDS/MGS node.
 - Slurm final configuration is done with the script `setup_slurm.sh` which scp the `slurm_update_config.sh` script to the VMs and runs it on each VM.
 - Lustre file system is mounted on the client and compute node at `/lustre/vagrant`.
-- Instructions include how to launch, configure Slurm, and monitor Lustre using collectl.  
+- Instructions include how to launch, configure Slurm, and monitor Lustre using collectl.
 
-
-- always check Vagrantfile, setup_slurm.sh, and slurm_update_config.sh for the environment configuration.
+- Always check Vagrantfile, setup_slurm.sh, and slurm_update_config.sh for the environment configuration.
 
 ## IIB GPU cluster setup specifications
+
+### software specifications
+- **Node Version:** Always use node23 for consistency across the project.
+- **Styling:** Use Tailwind CSS for designing UI components.
+- **Framework:** Use Next.js for the web application with app router (both frontend and backend).
 
 ### Use Cases
 

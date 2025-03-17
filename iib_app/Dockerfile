@@ -1,11 +1,14 @@
-FROM node:23-alpine
+# Stage 1: Build
+FROM node:23-alpine AS builder
 WORKDIR /app
-# Initialize a simple Next.js application using the app directory (Next.js 13+)
-RUN npm init -y && npm install next react react-dom
-# Create a minimal Next.js page in the app directory
-RUN mkdir app && \
-    echo "export default function Page() { return <div>Hello, Next.js App Directory!</div>; }" > app/page.jsx
-# Expose application port
+COPY package.json ./
+RUN npm install
+COPY . ./
+RUN npm run build
+
+# Stage 2: Run the app
+FROM node:23-alpine AS runner
+WORKDIR /app
+COPY --from=builder /app ./
 EXPOSE 3000
-# Start the Next.js development server
-CMD ["npx", "next", "dev"]
+CMD ["npm", "start"]
