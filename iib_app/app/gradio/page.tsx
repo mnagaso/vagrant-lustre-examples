@@ -1,10 +1,12 @@
+"use client";
+'use client';
 import Head from 'next/head';
 import { useState } from 'react';
 
-export default function Gradio() {
-  const [result, setResult] = useState('');
+export default function Gradio(): JSX.Element {
+  const [result, setResult] = useState<string>('');
 
-  async function onSubmit() {
+  async function onSubmit(): Promise<void> {
     const resp = await fetch('/api/submit-slurm', { method: 'POST' });
     const data = await resp.json();
     setResult(data.message);
