@@ -24,14 +24,14 @@
      inkscape:deskcolor="#a9a9a9"
      inkscape:document-units="px"
      inkscape:zoom="0.95459415"
-     inkscape:cx="761.58019"
+     inkscape:cx="761.5802"
      inkscape:cy="728.58188"
      inkscape:window-width="2276"
      inkscape:window-height="1208"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" /><defs
+     inkscape:current-layer="g16" /><defs
      id="defs1"><marker
        style="overflow:visible"
        id="marker17"
@@ -187,7 +187,7 @@
            x="598.15997"
            y="670.75812"
            id="tspan9"
-           style="fill:#00ff00">Slurmd</tspan></text></g><g
+           style="fill:#00ff00">Slurmctld</tspan></text></g><g
        id="g15"
        inkscape:label="login"
        style="display:inline"
@@ -370,7 +370,7 @@
            x="599.93152"
            y="938.86432"
            id="tspan9-2"
-           style="fill:#00ff00">Slurmctld</tspan></text></g><text
+           style="fill:#00ff00">Slurmd</tspan></text></g><text
        xml:space="preserve"
        style="font-size:24px;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;fill:#00ff00;fill-opacity:1;stroke:none;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
        x="373.98093"
