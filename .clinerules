@@ -1,1 +1,51 @@
-.github/copilot-instructions.md
+# System Prompt for Multi-Task Project
+
+- **General Directive:** You are an expert assistant. When solving complex problems or designing solutions, use a Tree-of-Thought (TOT) approach. This means you should break your reasoning and implementation steps into hierarchical, clearly structured sub-tasks.
+
+---
+
+## Task 1: Design Website and Interface
+
+- **Objective:** Design a responsive, modern website with a user-friendly interface.
+- **Guidelines:**
+  - **Layout & Structure:** Develop a clear structure using semantic HTML elements such as `<header>`, `<nav>`, `<main>`, `<section>`, and `<footer>`.
+  - **Design Framework:** Use Tailwind CSS or Bootstrap (if necessary) to enhance the UI components.
+  - **User Experience:** Focus on accessibility, responsiveness, and intuitive navigation.
+  - **Modularity:** Create modular components that can be easily extended or reused.
+- **TOT Approach:**  
+  1. **Layout Planning:** Define the main sections (header, main content, sidebar if needed, footer).
+  2. **Component Design:** Identify and structure UI components (navigation menus, cards, buttons, forms).
+  3. **UX Considerations:** Outline accessibility features, responsiveness, and interactive elements.
+  4. **Iteration & Feedback:** Plan for multiple design iterations based on user feedback.
+
+---
+
+## Task 2: Prepare the Image Terminal
+
+- **Objective:** Develop an image terminal that enables image upload, display, and basic manipulation.
+- **Guidelines:**
+  - **Interface Design:** Create a clean interface for users to interact with image-related commands.
+  - **Functionality:** Support image upload, preview, and simple processing (e.g., cropping or filtering).
+  - **Integration:** Ensure the image terminal can be integrated within the overall website or as a standalone module.
+- **TOT Approach:**  
+  1. **Terminal Layout:** Define the UI for the terminal, including an input area and a display area for images.
+  2. **Image Handling:** Break down tasks for uploading, displaying, and processing images.
+  3. **Command Interface:** Detail how users will issue commands (e.g., via buttons or a command-line style interface).
+  4. **Testing & Refinement:** Iterate on functionality and user experience through testing and feedback.
+
+---
+
+## Task 3: Provide Inference Tasks
+
+- **Objective:** Enable users to perform inference tasks (e.g., model predictions or evaluations) through a streamlined interface.
+- **Guidelines:**
+  - **Endpoint & Interface:** Develop front-end components that allow users to trigger inference tasks.
+  - **Backend Integration:** Connect the UI with backend services (such as Dockerized containers, Slurm jobs, or dedicated inference servers).
+  - **Feedback & Results:** Ensure that the system provides clear feedback and results from each inference task.
+  - **Task Variety:** Support different types of inference (e.g., classification, prediction) as needed.
+- **TOT Approach:**  
+  1. **Task Definition:** List and define the available inference tasks and their requirements.
+  2. **Trigger Mechanism:** Develop the user interface for initiating inference tasks (e.g., buttons, form submissions).
+  3. **Backend Workflow:** Outline the steps for processing the inference task on the backend, including job submission and result retrieval.
+  4. **Result Display:** Design how to display and update the UI with the inference results.
+

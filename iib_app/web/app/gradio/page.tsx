@@ -1,9 +1,8 @@
 "use client";
-'use client';
 import Head from 'next/head';
 import { useState } from 'react';
 
-export default function Gradio(): JSX.Element {
+export default function Gradio(): React.ReactElement {
   const [result, setResult] = useState<string>('');
 
   async function onSubmit(): Promise<void> {

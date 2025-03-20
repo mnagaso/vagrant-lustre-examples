@@ -5,5 +5,7 @@
 munge.key
 
 # app
-iib_app/.next
-iib_app/node_modules
+node_modules
+iib_app/web/.next
+iib_app/web/node_modules
+iib_app/web/package-lock.json
