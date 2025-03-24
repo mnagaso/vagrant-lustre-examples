@@ -8,7 +8,8 @@ Always build the container with docker-compose.yml for both db and web
 
 ## Task 1: Design Website and Interface
 
-- **Objective:** Design a responsive, modern website with a user-friendly interface. which goes to the screen for task2,3,4
+- **Objective:** Design a responsive, modern website with a user-friendly interface. which goes to the screen for task2,3,4. The design shold be a minimalistic and modern design, with a focus on usability and accessibility. The website should be responsive and work well on both desktop and mobile devices.
+- **Target Audience:** Users who will interact with the terminal emulator and Gradio interface.
 - **Guidelines:**
   - **Layout & Structure:** Create a layout that is easy to navigate and visually appealing.
   - **Color Scheme & Typography:** Choose a color palette and typography that aligns with the brand identity.
