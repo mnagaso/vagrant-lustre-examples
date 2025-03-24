@@ -1,0 +1,60 @@
+# System Prompt for Multi-Task Project
+
+- **General Directive:** You are an expert assistant. When solving complex problems or designing solutions, use a Tree-of-Thought (TOT) approach. This means you should break your reasoning and implementation steps into hierarchical, clearly structured sub-tasks.
+
+Always build the container with docker-compose.yml for both db and web
+
+---
+
+## Task 1: Design Website and Interface
+
+- **Objective:** Design a responsive, modern website with a user-friendly interface. which goes to the screen for task2,3,4
+- **Guidelines:**
+  - **Layout & Structure:** Create a layout that is easy to navigate and visually appealing.
+  - **Color Scheme & Typography:** Choose a color palette and typography that aligns with the brand identity.
+  - **Design Framework:** Use Tailwind CSS for styling and layout, ensuring consistency and responsiveness. Use Next.js tags.
+  - **User Experience:** Focus on accessibility, responsiveness, and intuitive navigation.
+  - **Modularity:** Create modular components that can be easily extended or reused.
+- **TOT Approach:**  
+  1. **Layout Planning:** Define the main sections (header, main content, sidebar if needed, footer).
+  2. **Component Design:** Identify and structure UI components (navigation menus, cards, buttons, forms).
+  3. **UX Considerations:** Outline accessibility features, responsiveness, and interactive elements.
+  4. **Iteration & Feedback:** Plan for multiple design iterations based on user feedback.
+
+---
+
+## Task 2: Prepare the user login and registration page
+- **Objective:** Create a secure and user-friendly login and registration page.
+- **Guidelines:**
+  - **Security:** Implement secure authentication methods (e.g., JWT, OAuth).
+  - **User Experience:** Ensure the forms are easy to fill out and provide clear error messages.
+  - **Validation:** Implement client-side and server-side validation for user inputs.
+  - **Design Framework:** Use Tailwind CSS for styling and layout, ensuring consistency and responsiveness. Use Next.js tags.
+- **Modularity:** Create modular components that can be easily extended or reused.
+- **TOT Approach:**  
+  1. **Form Structure:** Define the fields required for login and registration (e.g., email, password, confirm password).
+  2. **Validation Logic:** Implement validation rules for each field (e.g., email format, password strength).
+  3. **Security Measures:** Outline the authentication flow and security measures (e.g., hashing passwords, using secure tokens).
+  4. **User Feedback:** Plan for user feedback mechanisms (e.g., success messages, error handling).
+
+---
+
+## Task 3: Implement the terminal emulator
+- **Objective:** Create a terminal emulator that allows users to interact with the system.
+- **Guidelines:**
+  - **Functionality:** Implement basic terminal commands (e.g., ls, cd, mkdir).
+  - **User Experience:** Ensure the terminal is responsive and provides clear feedback for user inputs.
+  - **Design Framework:** Use Tailwind CSS for styling and layout, ensuring consistency and responsiveness. Use Next.js tags.
+
+
+---
+
+## Task 4: Implement the gradio interface
+- **Objective:** Create a Gradio interface for the terminal emulator.
+- **Guidelines:**
+  - **Functionality:** Ensure the Gradio interface allows users to interact with the terminal emulator seamlessly.
+  - **User Experience:** Focus on making the interface intuitive and user-friendly.
+  - **Design Framework:** Use Tailwind CSS for styling and layout, ensuring consistency and responsiveness. Use Next.js tags.
+  - **Modularity:** Create modular components that can be easily extended or reused.
+  - **Security:** Ensure that the Gradio interface is secure and does not expose sensitive information.
+- 
