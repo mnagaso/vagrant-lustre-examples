@@ -8,4 +8,3 @@ node_modules
 iib_app/web/.next
 iib_app/web/node_modules
 iib_app/web/package-lock.json
-iib_app/web/public/*
