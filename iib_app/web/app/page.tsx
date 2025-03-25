@@ -1,6 +1,6 @@
-import Header from "../components/Header/header";
-import Toppage from "../components/Toppage/toppage";
-import Footer from "../components/Footer/footer";
+import Header from "@/components/Header/header";
+import Toppage from "@/components/Top/page";
+import Footer from "@/components/Footer/footer";
 
 export default async function Home() {
   return (

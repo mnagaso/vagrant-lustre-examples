@@ -3,6 +3,10 @@
 // The default database is set to "iib_db" and the users collection is "users" as initialized in mongo-init.js.
 import { MongoClient, Collection } from 'mongodb';
 
+if (!process.env.MONGODB_URI) {
+  throw new Error('Please add your MongoDB connection string to .env.local');
+}
+
 const uri = process.env.MONGODB_URI || 'mongodb://db:27017/iib_db';
 const options = {};
 
