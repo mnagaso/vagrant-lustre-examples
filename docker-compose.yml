@@ -9,8 +9,8 @@ services:
       - "3000:3000"
     depends_on:
       - db
-    environment:
-      - NODE_ENV=development
+    #environment:
+    #  - NODE_ENV=development
   db:
     image: mongo:latest
     ports:
