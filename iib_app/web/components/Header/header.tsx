@@ -17,13 +17,15 @@ export default function Header() {
           <span className="text-xl font-bold">IIB Cluster Interface</span>
         </Link>
 
-        {/* Navigation can be added here */}
+        {/* Navigation can be added here
+
         <nav className="hidden md:flex space-x-4">
           <Link href="/dashboard" className="hover:text-gray-300">Dashboard</Link>
           <Link href="/jobs" className="hover:text-gray-300">Jobs</Link>
           <Link href="/filesystem" className="hover:text-gray-300">Filesystem</Link>
           <Link href="/users" className="hover:text-gray-300">Users</Link>
         </nav>
+        */}
       </div>
     </header>
   );
