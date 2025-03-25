@@ -1,27 +1,36 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function Toppage() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Clear messages when component mounts
+  useEffect(() => {
+    setError(null);
+    setSuccess(null);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setIsLoading(true);
 
-    const usernameInput = (e.currentTarget.elements.namedItem("username") as HTMLInputElement)?.value;
-    const passwordInput = (e.currentTarget.elements.namedItem("password") as HTMLInputElement)?.value;
+    const formData = new FormData(e.currentTarget);
+    const username = formData.get("username") as string;
+    const password = formData.get("password") as string;
 
     try {
-      console.log(`Submitting login form: username=${usernameInput}, password=***`);
-
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: usernameInput, password: passwordInput }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
@@ -29,8 +38,10 @@ export default function Home() {
       if (res.ok) {
         if (data.token) {
           localStorage.setItem("authToken", data.token);
+          setSuccess(data.message || "Login successful");
+          // Use Next.js router for navigation after successful login
+          setTimeout(() => router.push("/dashboard"), 1000);
         }
-        setSuccess(data.message);
       } else {
         setError(data.error || 'Login failed');
         console.error('Login response:', res.status, data);
@@ -39,6 +50,8 @@ export default function Home() {
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
       setError(`An error occurred: ${errorMessage}`);
       console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -77,29 +90,37 @@ export default function Home() {
 
         <form className="flex flex-col gap-4 bg-black text-white p-4 w-full max-w-md" onSubmit={handleSubmit}>
           <div className="mb-2">
-            <label className="font-semibold block mb-1">Username:</label>
+            <label className="font-semibold block mb-1" htmlFor="username">Username:</label>
             <input
               type="text"
+              id="username"
               name="username"
               className="border p-2 bg-black text-white placeholder-white w-full"
               placeholder="Enter your username (try 'admin')"
               required
+              disabled={isLoading}
             />
           </div>
 
           <div className="mb-4">
-            <label className="font-semibold block mb-1">Password:</label>
+            <label className="font-semibold block mb-1" htmlFor="password">Password:</label>
             <input
               type="password"
+              id="password"
               name="password"
               className="border p-2 bg-black text-white placeholder-white w-full"
               placeholder="Enter your password (try 'admin')"
               required
+              disabled={isLoading}
             />
           </div>
 
-          <button type="submit" className="rounded bg-white text-black px-4 py-2 hover:bg-gray-200 transition-colors">
-            Login
+          <button
+            type="submit"
+            className="rounded bg-white text-black px-4 py-2 hover:bg-gray-200 transition-colors disabled:opacity-50"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
       </main>
