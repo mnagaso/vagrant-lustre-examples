@@ -36,12 +36,15 @@ export default function Toppage() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.token) {
-          localStorage.setItem("authToken", data.token);
-          setSuccess(data.message || "Login successful");
-          // Use Next.js router for navigation after successful login
-          setTimeout(() => router.push("/dashboard"), 1000);
-        }
+          if (data.token) {
+            localStorage.setItem("authToken", data.token);
+            setSuccess(data.message || "Login successful");
+            // Navigate to top page on successful login
+            setTimeout(() => router.push("/"), 1000);
+          } else {
+            // If no token, navigate to login page
+            setTimeout(() => router.push("/login"), 1000);
+          }
       } else {
         setError(data.error || 'Login failed');
         console.error('Login response:', res.status, data);
