@@ -16,26 +16,7 @@ export default function Header() {
           <span className="text-xl font-bold">IIB Cluster</span>
         </Link>
 
-        <nav>
-          <ul className="flex gap-6">
-            <li>
-              <Link href="/dashboard" className="hover:text-gray-300 transition-colors">
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link href="/jobs" className="hover:text-gray-300 transition-colors">
-                Jobs
-              </Link>
-            </li>
-            <li>
-              <Link href="/docs" className="hover:text-gray-300 transition-colors">
-                Documentation
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </div>
+     </div>
     </header>
   );
 }

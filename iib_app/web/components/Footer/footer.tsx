@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export default function Footer() {
   return (
     <footer className="w-full bg-gray-100 dark:bg-gray-900 p-6">
@@ -11,17 +9,6 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="flex gap-6">
-            <Link href="/about" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-              About
-            </Link>
-            <Link href="/terms" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-              Terms
-            </Link>
-            <Link href="/privacy" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-              Privacy
-            </Link>
-          </div>
         </div>
       </div>
     </footer>
