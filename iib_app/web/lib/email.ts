@@ -33,3 +33,9 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
   await transporter.sendMail(mailOptions);
 }
+
+export async function verifyEmailConfig(): Promise<boolean> {
+  const gmailUser = process.env.EMAIL_USER;
+  const gmailAppPassword = process.env.EMAIL_PASSWORD;
+  return Boolean(gmailUser && gmailAppPassword);
+}
