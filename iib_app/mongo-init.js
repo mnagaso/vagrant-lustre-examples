@@ -1,3 +1,13 @@
+function _getEnv(key) {
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  if (typeof getenv === 'function') {
+    return getenv(key);
+  }
+  return null;
+}
+
 print('Starting MongoDB initialization...');
 
 try {
