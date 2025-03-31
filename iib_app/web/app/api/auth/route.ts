@@ -39,9 +39,6 @@ export async function POST(req: NextRequest) {
     const db = client.db(DB_NAME);
     const usersCollection = db.collection('users');
 
-    // wait for the connection to be established
-    await client.connect();
-
     // Find user by username only (not by password anymore)
     const user = await usersCollection.findOne({ username });
 

@@ -7,6 +7,9 @@ services:
       - "3000:3000"
     depends_on:
       - db
+    env_file:
+      - ./web/.env.local
+
 
   db:
     image: mongo:latest

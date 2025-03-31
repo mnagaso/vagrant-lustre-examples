@@ -3,8 +3,8 @@ import { MongoClient } from 'mongodb';
 import crypto from 'crypto';
 import { sendEmail } from '@/lib/email';
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017";
-const DB_NAME = process.env.DB_NAME || "lustre_mgmt";
+const MONGODB_URI = process.env.MONGODB_URI; // || "mongodb://db:27017";
+const DB_NAME = process.env.DB_NAME;// || "iib_db";
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 export async function POST(request: Request) {
@@ -19,6 +19,13 @@ export async function POST(request: Request) {
     }
 
     // Connect to the database
+    if (!MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not defined');
+    }
+    if (!DB_NAME) {
+      throw new Error('DB_NAME environment variable is not defined');
+    }
+
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     const db = client.db(DB_NAME);

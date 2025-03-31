@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = process.env.DB_NAME || 'lustre_mgmt';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://db:27017';
+const DB_NAME = process.env.DB_NAME || 'iib_db';
 
 export async function POST(req: NextRequest) {
   try {
