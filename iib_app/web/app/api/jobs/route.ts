@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build query filters
-    const filter: Record<string, any> = {};
+    const filter: Record<string, unknown> = {};
     if (userId) filter.user = userId;
     if (status) filter.status = status;
 

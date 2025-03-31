@@ -36,13 +36,14 @@ try {
   if (!adminUser) {
     db.users.insertOne({
       username: 'admin',
-      password: '$2a$12$V5RwJgoBWWLz4l97YU84X.YrX9WTc7o9yJgcvN8JXP1sKQeGLIwVG', // 'admin' hashed with bcrypt
+      // 'admin' hashed with bcrypt,  using a salt rounds of 12 and web/script/bcript-hash.js
+      password: '$2b$12$tVFPFMLvrdNClCButh1zFeFYqQNmGecCnWA4KTq4YZpXfYh7t.RJm',
       email: 'mnsaru18@gmail.com',
       role: 'admin',
       fullName: 'System Administrator',
       createdAt: new Date(),
       lastLogin: null,
-      requirePasswordChange: true
+      requirePasswordChange: false
     });
     print('Created admin user');
   }
@@ -51,7 +52,7 @@ try {
   const testUsers = [
     {
       username: 'researcher1',
-      password: '$2a$12$SSoEjLQzs5.S2yEfaFg1Mu0IwlERXoLBi0t7hPMCL5.4n6Mrh9sAm', // 'password123' hashed with bcrypt
+      password: '$2b$12$fCETukrG9yuy7dFuX79eNuyV3i/BtyaN61qzy95JnaeThxZRCrHam', // 'password123' hashed with bcrypt
       email: 'researcher1@iibcluster.local',
       role: 'user',
       fullName: 'Test Researcher 1',
@@ -61,7 +62,7 @@ try {
     },
     {
       username: 'researcher2',
-      password: '$2a$12$SSoEjLQzs5.S2yEfaFg1Mu0IwlERXoLBi0t7hPMCL5.4n6Mrh9sAm', // 'password123' hashed with bcrypt
+      password: '$2b$12$fCETukrG9yuy7dFuX79eNuyV3i/BtyaN61qzy95JnaeThxZRCrHam', // 'password123' hashed with bcrypt
       email: 'researcher2@iibcluster.local',
       role: 'user',
       fullName: 'Test Researcher 2',

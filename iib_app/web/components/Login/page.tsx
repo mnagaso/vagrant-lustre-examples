@@ -1,50 +1,41 @@
 'use client';
 
-import { useState, FormEvent, useEffect, useRef } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from './useAuth';
+import { useFormInputs } from './useFormInputs';
 
 interface LoginFormProps {
   onSuccess?: (token: string, message: string) => void;
-  onError?: (message: string) => void;
   onLoadingChange?: (isLoading: boolean) => void;
 }
 
 export default function LoginForm({
   onSuccess,
-  onError,
   onLoadingChange
 }: LoginFormProps) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const {
+    inputs,
+    handleInputChange,
+    inputRefs
+  } = useFormInputs(['username', 'password']);
+
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { login, detectRateLimit, formatErrorMessage } = useAuth();
 
-  // Create refs to access the actual DOM elements
-  const usernameRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-
-  // Effect to detect browser autofill
+  // Handle autofill detection
   useEffect(() => {
-    // Check for autofilled values when component mounts
     const checkAutofill = () => {
-      // For username field
-      if (usernameRef.current && usernameRef.current.value && usernameRef.current.value !== username) {
-        setUsername(usernameRef.current.value);
-      }
-
-      // For password field
-      if (passwordRef.current && passwordRef.current.value && passwordRef.current.value !== password) {
-        setPassword(passwordRef.current.value);
-      }
+      Object.entries(inputRefs.current).forEach(([field, ref]) => {
+        if (ref && ref.value && ref.value !== inputs[field]) {
+          handleInputChange(field as 'username' | 'password', ref.value);
+        }
+      });
     };
 
-    // Check immediately and then set up an interval to check periodically
     checkAutofill();
-
-    // Some browsers delay autofill, so we check a few times
     const intervalId = setInterval(checkAutofill, 100);
-
-    // Clean up interval after 1 second (should be enough for autofill)
     const timeoutId = setTimeout(() => {
       clearInterval(intervalId);
     }, 1000);
@@ -53,25 +44,13 @@ export default function LoginForm({
       clearInterval(intervalId);
       clearTimeout(timeoutId);
     };
-  }, [username, password]);
-
-  // Handler for when input values change manually or via events
-  const handleInputChange = (field: 'username' | 'password', value: string) => {
-    if (field === 'username') {
-      setUsername(value);
-    } else {
-      setPassword(value);
-    }
-  };
+  }, [inputs, handleInputChange, inputRefs]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Basic validation
-    if (!username || !password) {
-      const errorMsg = 'Username and password are required';
-      setError(errorMsg);
-      if (onError) onError(errorMsg);
+    if (!inputs.username || !inputs.password) {
+      setError('Username and password are required');
       return;
     }
 
@@ -80,23 +59,54 @@ export default function LoginForm({
     setError('');
 
     try {
-      // For demo purposes - simulate API call
-      // In production, replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await login(inputs.username, inputs.password);
 
-      // Simulate successful login
-      if (username === 'admin' && password === 'admin') {
-        const token = 'demo-token-' + Math.random().toString(36).substring(2);
-        if (onSuccess) {
-          onSuccess(token, 'Login successful');
+      if (!result.success) {
+        const { response, data } = result;
+        // Add null checks for both response and data
+        let errorDetails = 'Unknown error';
+
+        if (response && data) {
+          errorDetails = `Status: ${response.status}, Message: ${data.error || 'No error message'}`;
+          console.error(`Authentication failed: ${errorDetails}`);
+
+          // Handle error cases
+          let errorMsg = data.error || 'Authentication failed';
+          errorMsg = `${errorMsg} (${errorDetails})`;
+
+          const isRateLimited = detectRateLimit(response, errorMsg);
+          errorMsg = formatErrorMessage(response, errorMsg, isRateLimited);
+
+          setError(errorMsg);
+        } else {
+          setError('Authentication failed - server unreachable');
         }
-      } else {
-        throw new Error('Invalid credentials');
+        return;
       }
+
+      const { data } = result;
+
+      if (data?.requirePasswordChange) {
+        const msg = 'You need to change your password before continuing';
+        setError(msg);
+
+        setTimeout(() => {
+          window.location.href = `/change-password?userId=${data.userId}`;
+        }, 2000);
+        return;
+      }
+
+      if (onSuccess && data) {
+        const token = data.token || 'auth-token';
+        onSuccess(token, data.message || 'Login successful');
+      }
+
+      setError('');
+
     } catch (err) {
+      console.error('Login request failed completely:', err);
       const errorMsg = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMsg);
-      if (onError) onError(errorMsg);
+      setError(`${errorMsg} (Network error)`);
     } finally {
       setIsLoading(false);
       if (onLoadingChange) onLoadingChange(false);
@@ -108,7 +118,7 @@ export default function LoginForm({
       <h2 className="text-lg font-medium text-gray-900 mb-4">Sign in</h2>
 
       {error && (
-        <div className="mb-4 text-sm text-gray-800 p-2 bg-gray-100 rounded-sm" role="alert">
+        <div className="mb-4 text-sm text-red-800 p-3 bg-red-50 border border-red-200 rounded-sm" role="alert">
           {error}
         </div>
       )}
@@ -123,10 +133,10 @@ export default function LoginForm({
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-black"
             placeholder="Username"
-            value={username}
+            value={inputs.username}
             onChange={(e) => handleInputChange('username', e.target.value)}
             onInput={(e) => handleInputChange('username', e.currentTarget.value)}
-            ref={usernameRef}
+            ref={(el) => { inputRefs.current.username = el; }}
             disabled={isLoading}
           />
         </div>
@@ -140,10 +150,10 @@ export default function LoginForm({
             required
             className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-black"
             placeholder="Password"
-            value={password}
+            value={inputs.password}
             onChange={(e) => handleInputChange('password', e.target.value)}
             onInput={(e) => handleInputChange('password', e.currentTarget.value)}
-            ref={passwordRef}
+            ref={(el) => { inputRefs.current.password = el; }}
             disabled={isLoading}
           />
         </div>

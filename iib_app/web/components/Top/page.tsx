@@ -7,7 +7,6 @@ import LoginPage from '@/components/Login/page';
 
 export default function Toppage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -31,15 +30,10 @@ export default function Toppage() {
     // setTimeout(() => router.push("/dashboard"), 1000);
   };
 
-  const handleLoginError = (errorMessage: string) => {
-    setError(errorMessage);
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     setIsLoggedIn(false);
     setSuccess(null);
-    setError(null);
   };
 
   return (
@@ -57,14 +51,8 @@ export default function Toppage() {
           />
         </div>
 
-        {error && (
-          <div className="mb-4 border border-gray-200 text-gray-700 px-4 py-3 rounded-sm text-sm">
-            {error}
-          </div>
-        )}
-
         {success && (
-          <div className="mb-4 border border-gray-200 text-gray-700 px-4 py-3 rounded-sm text-sm">
+          <div className="mb-4 border border-green-200 bg-green-50 text-green-700 px-4 py-3 rounded-sm text-sm">
             {success}
           </div>
         )}
@@ -99,10 +87,7 @@ export default function Toppage() {
 
               <LoginPage
                 onSuccess={handleLoginSuccess}
-                onError={handleLoginError}
               />
-
-
             </>
           )}
         </div>

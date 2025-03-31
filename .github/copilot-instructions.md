@@ -32,18 +32,16 @@ The web application allows users to:
 
 ```
 iib_app/
-├── docker-compose.yml    # Docker configuration for web app and MongoDB
-├── mongo-init.js         # MongoDB initialization script
-├── scripts/              # Utility scripts
-│   └── add_user.sh       # Script for adding users to MongoDB
-└── web/                  # Next.js 15 application
-    ├── app/              # Next.js App Router structure
-    │   ├── globals.css   # Global styles with Tailwind
-    │   ├── layout.tsx    # Root layout with font configuration
-    │   └── page.tsx      # Main page component
-    ├── components/       # Other components
-    ├── Dockerfile        # Container configuration for Next.js app
-    ├── package.json      # Dependencies and scripts
+├── docker-compose.yml      # Docker configuration for web app and MongoDB
+├── mongo-init.js           # MongoDB initialization script
+└── web/                    # Next.js 15 application
+    ├── app/                # Next.js App Router structure
+    │   ├── globals.css     # Global styles with Tailwind
+    │   ├── layout.tsx      # Root layout with font configuration
+    │   └── page.tsx        # Main page component
+    ├── components/         # Other components
+    ├── Dockerfile          # Container configuration for Next.js app
+    ├── package.json        # Dependencies and scripts
     └── ... (config files)
 ```
 

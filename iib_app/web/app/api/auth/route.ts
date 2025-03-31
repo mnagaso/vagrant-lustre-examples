@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MongoClient } from 'mongodb';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import { rateLimit } from '../../../lib/rateLimit';
+import { verifyPassword } from '../../../lib/auth-utils';
 
 // Environment variables should be properly set in your deployment
 const JWT_SECRET = process.env.JWT_SECRET || 'replacethiswithstrongsecretkey';
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const DB_NAME = process.env.DB_NAME || 'lustre_mgmt';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://db:27017';
+const DB_NAME = process.env.DB_NAME || 'iib_db';
 const TOKEN_EXPIRY = '8h'; // Token expires after 8 hours
 
 // Rate limiting middleware
@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
     const db = client.db(DB_NAME);
     const usersCollection = db.collection('users');
 
+    // wait for the connection to be established
+    await client.connect();
+
     // Find user by username only (not by password anymore)
     const user = await usersCollection.findOne({ username });
 
@@ -50,8 +53,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Compare hashed password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Compare hashed password using bcrypt via our utility function
+    const isPasswordValid = await verifyPassword(password, user.password);
+    // After verifying
+    console.log('Password verification result:', isPasswordValid);
+
 
     if (!isPasswordValid) {
       return NextResponse.json(

@@ -32,3 +32,12 @@ export async function closeMongoConnection() {
     cachedDb = null;
   }
 }
+
+// Add a default export that creates and manages a MongoDB client
+const clientPromise = new MongoClient(MONGODB_URI).connect().then(client => {
+  cachedClient = client;
+  cachedDb = client.db(DB_NAME);
+  return client;
+});
+
+export default clientPromise;
