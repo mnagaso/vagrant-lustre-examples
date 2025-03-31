@@ -23,6 +23,7 @@ const ResetPasswordConfirmForm = () => {
         id="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 mb-4"
         required
       />
       <label htmlFor="confirmPassword">Confirm Password:</label>
@@ -31,6 +32,7 @@ const ResetPasswordConfirmForm = () => {
         id="confirmPassword"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
+        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 mb-4"
         required
       />
       <button type="submit">Confirm Reset</button>

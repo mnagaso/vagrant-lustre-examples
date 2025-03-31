@@ -131,7 +131,7 @@ export default function LoginForm({
             type="text"
             autoComplete="username"
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-black bg-white text-gray-900"
             placeholder="Username"
             value={inputs.username}
             onChange={(e) => handleInputChange('username', e.target.value)}
@@ -148,7 +148,7 @@ export default function LoginForm({
             type="password"
             autoComplete="current-password"
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-black"
+            className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-1 focus:ring-black bg-white text-gray-900"
             placeholder="Password"
             value={inputs.password}
             onChange={(e) => handleInputChange('password', e.target.value)}
