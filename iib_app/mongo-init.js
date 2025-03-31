@@ -18,36 +18,80 @@ try {
   // Switch to the database (creates it if it doesn't exist)
   db = db.getSiblingDB(dbName);
 
-  // Create users collection if it doesn't exist
-  if (!db.getCollectionNames().includes('users')) {
-    db.createCollection('users');
+  // Create collections if they don't exist
+  db.createCollection('users');
+  db.createCollection('jobs');
+  db.createCollection('system_settings');
 
-    // Insert default admin user
+  // Create indexes
+  db.users.createIndex({ "username": 1 }, { unique: true });
+  db.users.createIndex({ "email": 1 }, { unique: true });
+  db.users.createIndex({ "resetToken": 1 });
+  db.jobs.createIndex({ "user_id": 1 });
+  db.jobs.createIndex({ "status": 1 });
+  db.jobs.createIndex({ "submitted_at": -1 });
+
+  // Add default admin user
+  const adminUser = db.users.findOne({ username: 'admin' });
+  if (!adminUser) {
     db.users.insertOne({
-      username: "admin",
-      password: "admin", // In production, use proper password hashing
-      role: "admin",
-      createdAt: new Date()
+      username: 'admin',
+      password: '$2a$12$V5RwJgoBWWLz4l97YU84X.YrX9WTc7o9yJgcvN8JXP1sKQeGLIwVG', // 'admin' hashed with bcrypt
+      email: 'mnsaru18@gmail.com',
+      role: 'admin',
+      fullName: 'System Administrator',
+      createdAt: new Date(),
+      lastLogin: null,
+      requirePasswordChange: true
     });
-
-    print("Created 'users' collection and added default admin user");
-  } else {
-    print("'users' collection already exists");
+    print('Created admin user');
   }
 
-  // Create jobs collection for Slurm job information
-  if (!db.getCollectionNames().includes('jobs')) {
-    db.createCollection('jobs');
-    print("Created 'jobs' collection");
+  // Add default test users
+  const testUsers = [
+    {
+      username: 'researcher1',
+      password: '$2a$12$SSoEjLQzs5.S2yEfaFg1Mu0IwlERXoLBi0t7hPMCL5.4n6Mrh9sAm', // 'password123' hashed with bcrypt
+      email: 'researcher1@iibcluster.local',
+      role: 'user',
+      fullName: 'Test Researcher 1',
+      createdAt: new Date(),
+      lastLogin: null,
+      requirePasswordChange: true
+    },
+    {
+      username: 'researcher2',
+      password: '$2a$12$SSoEjLQzs5.S2yEfaFg1Mu0IwlERXoLBi0t7hPMCL5.4n6Mrh9sAm', // 'password123' hashed with bcrypt
+      email: 'researcher2@iibcluster.local',
+      role: 'user',
+      fullName: 'Test Researcher 2',
+      createdAt: new Date(),
+      lastLogin: null,
+      requirePasswordChange: true
+    }
+  ];
+
+  testUsers.forEach(user => {
+    const existingUser = db.users.findOne({ username: user.username });
+    if (!existingUser) {
+      db.users.insertOne(user);
+      print(`Created test user: ${user.username}`);
+    }
+  });
+
+  // Add system settings
+  const systemSettings = db.system_settings.findOne({ _id: 'email_config' });
+  if (!systemSettings) {
+    db.system_settings.insertOne({
+      _id: 'email_config',
+      emailNotificationsEnabled: true,
+      emailVerificationRequired: false,
+      updatedAt: new Date()
+    });
+    print('Initialized system settings');
   }
 
-  // Create cluster_status collection for Lustre metrics
-  if (!db.getCollectionNames().includes('cluster_status')) {
-    db.createCollection('cluster_status');
-    print("Created 'cluster_status' collection");
-  }
-
-  print('MongoDB initialization completed successfully');
+  print('MongoDB initialization completed');
 } catch (error) {
   print('Error during MongoDB initialization: ' + error);
 }

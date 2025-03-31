@@ -1,43 +1,34 @@
-// This module establishes a connection to the MongoDB database,
-// using the "mongodb" driver and connecting to the "db" service defined in docker-compose.
-// The default database is set to "iib_db" and the users collection is "users" as initialized in mongo-init.js.
-import { MongoClient, Collection } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB connection string to .env.local');
-}
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+const DB_NAME = process.env.DB_NAME || 'lustre_mgmt';
 
-const uri = process.env.MONGODB_URI || 'mongodb://db:27017/iib_db';
-const options = {};
+let cachedClient: MongoClient | null = null;
+let cachedDb: Db | null = null;
 
-// Use cached connection pattern
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
-
-// In development, use a global variable so that the value
-// is preserved across module reloads caused by HMR (Hot Module Replacement).
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable to preserve the value
-  // across module reloads caused by HMR
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+export async function connectToDatabase() {
+  // If we already have a connection, use it
+  if (cachedClient && cachedDb) {
+    return { client: cachedClient, db: cachedDb };
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
-} else {
-  // In production mode, it's best to not use a global variable
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+
+  // Create a new connection
+  const client = new MongoClient(MONGODB_URI);
+  await client.connect();
+  const db = client.db(DB_NAME);
+
+  // Cache the connection
+  cachedClient = client;
+  cachedDb = db;
+
+  return { client, db };
 }
 
-export default clientPromise;
-
-// Helper function to get the "users" collection as defined in mongo-init.js
-export async function getUsersCollection(): Promise<Collection> {
-  const client = await clientPromise;
-  return client.db().collection('users');
+// Helper function to close the MongoDB connection
+export async function closeMongoConnection() {
+  if (cachedClient) {
+    await cachedClient.close();
+    cachedClient = null;
+    cachedDb = null;
+  }
 }
