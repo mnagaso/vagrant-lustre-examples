@@ -90,8 +90,9 @@ export default function LoginForm({
         const msg = 'You need to change your password before continuing';
         setError(msg);
 
+        // Use resetToken instead of userId for password change navigation
         setTimeout(() => {
-          window.location.href = `/change-password?userId=${data.userId}`;
+          window.location.href = `/change-password?token=${data.resetToken}`;
         }, 2000);
         return;
       }

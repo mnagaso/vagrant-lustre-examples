@@ -3,6 +3,7 @@ interface AuthData {
   token?: string;
   message?: string;
   userId?: string;
+  resetToken?: string;
   requirePasswordChange?: boolean;
   error?: string;
   code?: string;

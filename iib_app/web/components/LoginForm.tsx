@@ -6,11 +6,13 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [info, setInfo] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setIsLoading(true);
 
     try {
@@ -23,13 +25,21 @@ export default function LoginForm() {
 
       const data = await response.json();
 
+      //debug
+      console.log("Response data:", data);
+      console.log("Response status:", response.status);
+
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
 
       if (data.requirePasswordChange) {
-        // Redirect to password change page
-        router.push(`/change-password?userId=${data.userId}`);
+        console.log("Password change required, redirecting...");
+        // Clearer feedback to user that they need to change password
+        setInfo("Your account requires a password change. Redirecting...");
+        setTimeout(() => {
+          router.push(`/change-password?token=${data.resetToken}`);
+        }, 1500);
         return;
       }
 
@@ -51,6 +61,12 @@ export default function LoginForm() {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+        </div>
+      )}
+
+      {info && (
+        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+          {info}
         </div>
       )}
 

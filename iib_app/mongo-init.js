@@ -52,17 +52,17 @@ try {
   const testUsers = [
     {
       username: 'researcher1',
-      password: '$2b$12$fCETukrG9yuy7dFuX79eNuyV3i/BtyaN61qzy95JnaeThxZRCrHam', // 'password123' hashed with bcrypt
+      password: '$2b$12$YPDDDxTcffqF7urgCZaX4O6ws6u.jpgnVmBN24IrvZuF1uEbS9i9i', // 'password1234' hashed with bcrypt
       email: 'researcher1@iibcluster.local',
       role: 'user',
       fullName: 'Test Researcher 1',
       createdAt: new Date(),
       lastLogin: null,
-      requirePasswordChange: true
+      requirePasswordChange: false
     },
     {
       username: 'researcher2',
-      password: '$2b$12$fCETukrG9yuy7dFuX79eNuyV3i/BtyaN61qzy95JnaeThxZRCrHam', // 'password123' hashed with bcrypt
+      password: '$2b$12$8aMFaMsz6RxobTza9VpTJeAJyvIBDSpHMYLeyVZJIpnh/RjiHC/R.', // 'password1234' hashed with bcrypt
       email: 'researcher2@iibcluster.local',
       role: 'user',
       fullName: 'Test Researcher 2',

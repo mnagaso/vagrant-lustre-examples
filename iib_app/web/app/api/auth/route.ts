@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import { rateLimit } from '../../../lib/rateLimit';
 import { verifyPassword } from '../../../lib/auth-utils';
+import crypto from 'crypto';
 
 // Environment variables should be properly set in your deployment
 const JWT_SECRET = process.env.JWT_SECRET || 'replacethiswithstrongsecretkey';
@@ -38,9 +39,13 @@ export async function POST(req: NextRequest) {
 
     const db = client.db(DB_NAME);
     const usersCollection = db.collection('users');
+    console.log('usersCollection:', usersCollection);
 
     // Find user by username only (not by password anymore)
     const user = await usersCollection.findOne({ username });
+    // debug
+    console.log('Attempting to find user with username:', username);
+    console.log('User found:', user);
 
     if (!user) {
       // Use generic error message to prevent username enumeration
@@ -55,7 +60,6 @@ export async function POST(req: NextRequest) {
     // After verifying
     console.log('Password verification result:', isPasswordValid);
 
-
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Invalid credentials' },
@@ -65,11 +69,26 @@ export async function POST(req: NextRequest) {
 
     // Check if first login and password change required
     if (user.requirePasswordChange) {
+      // Generate a password reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Update user with reset token
+      await usersCollection.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            passwordResetToken: resetToken,
+            passwordResetExpires: resetTokenExpiry
+          }
+        }
+      );
+
       return NextResponse.json(
         {
           message: 'Password change required',
           requirePasswordChange: true,
-          userId: user._id.toString()
+          resetToken: resetToken
         },
         { status: 200 }
       );
