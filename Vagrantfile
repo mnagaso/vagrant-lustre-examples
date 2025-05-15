@@ -286,6 +286,14 @@ done
 echo "User directories creation completed."
 SCRIPT
 
+$install_docker = <<-SCRIPT
+# Install Docker
+sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io
+sudo systemctl enable --now docker
+sudo usermod -aG docker vagrant
+SCRIPT
+
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
   config.vm.provider "virtualbox" do |v|
@@ -358,7 +366,8 @@ Vagrant.configure("2") do |config|
     login.vm.provision "shell", name: "create_slurm_environment", inline: $create_slurm_environment
     login.vm.provision "shell", name: "create_user_dirs", inline: $create_user_dirs
     login.vm.provision "shell", name: "create_job_script", inline: $create_job_script
-end
+    login.vm.provision "shell", name: "install_docker", inline: $install_docker
+  end
 
   # Add a dedicated compute node
   config.vm.define "compute1" do |compute1|

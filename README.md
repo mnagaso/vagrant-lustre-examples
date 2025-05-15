@@ -35,12 +35,17 @@ The Lustre file system is mounted on the client and compute node at `/lustre/vag
    ```bash
    vagrant up
    ```
-2. setup slurm
+2. Set up Slurm:
    ```bash
    ./setup_slurm.sh
    ```
-
-3. run slurm job
+3. (Optional) Provision and start the web management interface:
+   ```bash
+   ./provision_iib_app.sh
+   # Then, to start the Next.js server on the login node:
+   vagrant ssh login -c 'bash /home/vagrant/start_nextjs.sh'
+   ```
+4. Run a Slurm job:
    ```bash
    vagrant ssh login
    cd /lustre/vagrant
@@ -48,9 +53,9 @@ The Lustre file system is mounted on the client and compute node at `/lustre/vag
    Ctrl+D # exit ssh
    ```
 
-4. check the lustre's log
+5. Check the Lustre's log:
 
-   on mxs
+   On mxs:
    ```
    vagrant ssh mxs
    lctl get_param md[ts].testhpc-MDT0000.*
@@ -58,23 +63,23 @@ The Lustre file system is mounted on the client and compute node at `/lustre/vag
    lctl get_param md[ts].testhpc-MDT0000.job_stats
    ```
 
-   on oss
+   On oss:
    ```
    vagrant ssh oss
    lctl get_param obdfilter.*.*
    or 
    lctl get_param obdfilter.testhpc-OST0000.job_stats
    lctl get_param obdfilter.testhpc-OST0001.job_stats
-  ```
+   ```
 
-## use the original perl code "fefssv.ph"
-   on mxs
+## Use the original Perl code "fefssv.ph"
+   On mxs:
    ``` bash
    vagrant ssh mxs
    sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,mdt=testhpc-MDT0000,v
    ```
    
-   below is the explanation of the command [manual](https://linux.die.net/man/1/collectl)
+   Below is the explanation of the command [manual](https://linux.die.net/man/1/collectl)
 
    - `-f tmp`
 This is the name of a file to write the output to
@@ -103,25 +108,25 @@ Instructs collectl to load an external module. In this case:
       - mdt=testhpc-MDT0000 passes a parameter to the module (it tells the script which MDT to monitor).
       - The trailing v might tell the module to run in verbose mode (or it could be setting another module-specific option).
 
-   or on oss
+   Or on oss:
    ``` bash
    vagrant ssh oss
    sudo collectl -f tmp -r00:00,30 -m -F60 -s+YZ -i10:60:300 --import ~/fefssv.ph,ost=testhpc-OST0000,v
    ```
 
-## to activate compute1 node
+## To activate compute1 node
    ``` bash
    vagrant ssh mxs -c "sudo scontrol update NodeName=compute1 State=RESUME"
    ```
 
-## to scp files
+## To scp files
 
-   instart vagrant-scp plugin
+   Install vagrant-scp plugin:
    ``` bash
    vagrant plugin install vagrant-scp
    ```
    
-   then 
+   Then:
    ```
    vagrant scp <some_local_file_or_dir> [vm_name]:<somewhere_on_the_vm>
    ```
@@ -132,7 +137,7 @@ Instructs collectl to load an external module. In this case:
 * [lustre](lustre/)
 
 
-## kvm error
+## KVM error
 
 If you get the following error message when running `vagrant up`:
 
@@ -152,9 +157,9 @@ You can disable the KVM kernel module by running the following command:
 sudo modprobe -r kvm_intel
 ```
 
-## firewall error
+## Firewall error
 
-sometimes mounting the shared folder can fail due to firewall rules. If you get the following error message when running `vagrant up`:
+Sometimes mounting the shared folder can fail due to firewall rules. If you get the following error message when running `vagrant up`:
 
 ```
 sudo systemctl stop firewalld
