@@ -1,0 +1,39 @@
+ARG CUDA_VERSION
+RUN test -n "${CUDA_VERSION}" || (echo "CUDA_VERSION not set" && false)
+
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
+
+ARG VLLM_ARCH
+ARG VLLM_VERS
+ARG VLLM_CPU_DISABLE_AVX512
+ARG VLLM_CPU_AVX512BF16
+ARG CUDA_VERSION
+ARG CUDA_TORCH_VERSION
+
+RUN test -n "${VLLM_ARCH}" || (echo "VLLM_ARCH not set" && false)
+RUN test -n "${VLLM_VERS}" || (echo "VLLM_VERS not set" && false)
+RUN test -n "${CUDA_VERSION}" || (echo "CUDA_VERSION not set" && false)
+RUN test -n "${CUDA_TORCH_VERSION}" || (echo "CUDA_TORCH_VERSION not set" && false)
+
+WORKDIR /workspace
+
+#https://docs.vllm.ai/en/v0.7.2/getting_started/installation/gpu/index.html#build-wheel-from-source
+RUN apt-get update -y \
+	&& apt-get install -y git libnuma-dev python3 python3-pip
+
+RUN git clone --branch ${VLLM_VERS} --single-branch https://github.com/vllm-project/vllm.git .
+RUN git submodule update --init --recursive
+
+RUN pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy \
+	&& pip install -v --pre torch torchvision torchaudio \
+		--index-url https://download.pytorch.org/whl/${CUDA_TORCH_VERSION}
+
+ENV VLLM_TARGET_DEVICE=${VLLM_ARCH}
+ENV VLLM_CPU_DISABLE_AVX512=${VLLM_CPU_DISABLE_AVX512}
+ENV VLLM_CPU_AVX512BF16=${VLLM_CPU_AVX512BF16}
+
+RUN python3 use_existing_torch.py
+RUN pip3 install -r requirements-build.txt
+RUN pip3 install -e . --no-build-isolation
+
+ENTRYPOINT ["python3", "-m", "vllm.entrypoints.openai.api_server"]

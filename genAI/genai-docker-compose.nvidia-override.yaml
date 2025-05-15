@@ -1,0 +1,57 @@
+services:
+  ollamaweb:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${OLLAMAWEB_GPU_LIMIT:-1}
+              capabilities: [gpu]
+
+  ollamacli:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${OLLAMACLI_GPU_LIMIT:-1}
+              capabilities: [gpu]
+
+  vllm:
+    command: --api-key ${VLLM_API_KEY:-sk-124781258123} --model ${VLLM_MODEL:-rinna/deepseek-r1-distill-qwen2.5-bakeneko-32b} -tp ${VLLM_TENSOR_PARALLEL:-1} -pp ${VLLM_PIPELINE_PARALLEL:-1} --max-model-len 4096
+    build:
+      dockerfile: Dockerfile.${VLLM_ARCH:-cuda}
+      args:
+        CUDA_VERSION: ${VLLM_CUDA_VERSION:?error}
+        CUDA_TORCH_VERSION: ${VLLM_CUDA_TORCH_VERSION:?error}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${VLLM_GPU_LIMIT:-1}
+              capabilities: [gpu]
+
+#  automatic1111:
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: ${A1111_GPU_LIMIT:-1}
+#              capabilities: [gpu]
+
+  comfyui:
+    build:
+      args:
+        COMFYUI_ARCH: ${COMFYUI_CUDA_TORCH_VERSION:?error}
+        COMFYUI_VERS: ${COMFYUI_VERS:-v0.3.14}
+    environment:
+      COMMANDLINE_ARGS: "--highvram"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${COMFYUI_GPU_LIMIT:-1}
+              capabilities: [gpu]

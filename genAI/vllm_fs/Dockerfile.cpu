@@ -1,0 +1,35 @@
+FROM python:3.12-slim
+
+WORKDIR /workspace
+
+ARG VLLM_ARCH
+ARG VLLM_VERS
+ARG VLLM_CPU_DISABLE_AVX512
+ARG VLLM_CPU_AVX512BF16
+
+RUN test -n "${VLLM_ARCH}" || (echo "VLLM_ARCH not set" && false)
+RUN test -n "${VLLM_VERS}" || (echo "VLLM_VERS not set" && false)
+
+#https://docs.vllm.ai/en/latest/getting_started/installation/cpu/index.html
+RUN apt-get update -y \
+	&& apt-get install -y git gcc-12 g++-12 libnuma-dev \
+	&& update-alternatives \
+		--install /usr/bin/gcc gcc /usr/bin/gcc-12 10 \
+		--slave /usr/bin/g++ g++ /usr/bin/g++-12
+
+#ADD https://github.com/vllm-project/vllm/archive/refs/tags/${VLLM_VERS}.tar.gz /workspace
+#RUN tar xzf *.tar.gz -C . --strip-components 1 && rm *.tar.gz
+RUN git clone --branch ${VLLM_VERS} --single-branch https://github.com/vllm-project/vllm.git .
+RUN git submodule update --init --recursive
+
+RUN pip install "cmake>=3.26" wheel packaging ninja "setuptools-scm>=8" numpy \
+	&& pip install -v -r requirements-${VLLM_ARCH}.txt \
+		--extra-index-url https://download.pytorch.org/whl/${VLLM_ARCH}
+
+ENV VLLM_TARGET_DEVICE=${VLLM_ARCH}
+ENV VLLM_CPU_DISABLE_AVX512=${VLLM_CPU_DISABLE_AVX512}
+ENV VLLM_CPU_AVX512BF16=${VLLM_CPU_AVX512BF16}
+
+RUN python setup.py install
+
+ENTRYPOINT ["python3", "-m", "vllm.entrypoints.openai.api_server"]

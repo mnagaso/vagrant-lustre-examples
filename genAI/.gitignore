@@ -1,0 +1,8 @@
+/.env
+/models/*
+/openwebui_fs/data/*
+/openedaispeech_fs/*.yaml
+/comfyui/user/*
+/ollama_fs/id_*
+#/nginx_fs/ssl/*
+/a1111_fs/*

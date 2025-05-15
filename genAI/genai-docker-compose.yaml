@@ -1,0 +1,665 @@
+# structure:
+#         [ ollama ] ->|
+#           [ vLLM ] ->|-> [ open webui ] -> [ nginx proxy ] <- browser
+#        [ ComfyUI ] ->|
+#  [ AUTOMATIC1111 ] ->|
+#
+# ollama (LLMs) and AUTOMATIC1111 (stable diffusion) have no internet
+# openwebui to use the "LLMs" as frontend
+# nginx to guard access
+
+name: genai
+
+services:
+  proxy:
+    image: nginx:${NGINX_DOCKER_TAG:-stable-alpine-slim}
+    networks:
+      genai-public-net: {}
+      genai-private-net:
+        ipv4_address: 172.69.1.1
+    ports:
+      #- ${NGINX_HTTP_DOCKER_PORT:-11080}:80       #openwebui plain
+      - ${NGINX_HTTPS_DOCKER_PORT:-443}:443       #openwebui ssl
+      - ${NGINX_OLLAMA_DOCKER_PORT:-11434}:11434  #ollama api plain
+    volumes:
+      - type: bind
+        source: ./nginx_fs/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+      - type: bind
+        source: ./nginx_fs/ssl
+        target: /etc/nginx/ssl
+        read_only: true
+    depends_on:
+      #- coredns
+      - openwebui
+      - ollamacli
+    restart: unless-stopped
+    pull_policy: always
+    deploy:
+      mode: replicated
+      replicas: ${NGINX_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${NGINX_CPU_LIMIT:-1}
+          memory: ${NGINX_MEM_LIMIT:-1}G
+          #pids: 1
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+#  coredns:
+#    image: coredns/coredns:${COREDNS_DOCKER_TAG:-latest}
+#    networks:
+#      genai-public-net: {}
+#      genai-private-net:
+#        ipv4_address: ${COREDNS_IP:-10.1.1.11}
+#    expose:
+#      - 53/udp #DNS service
+#    volumes:
+#      - type: bind
+#        source: ./coredns_fs/coredns.conf
+#        target: /etc/coredns/corefile
+#        read_only: true
+#    restart: unless-stopped
+#    pull_policy: always
+#    command: -conf /etc/coredns/corefile
+#    deploy:
+#      mode: replicated
+#      replicas: ${COREDNS_REPLICAS:-1}
+#      endpoint_mode: vip
+#      resources:
+#        limits:
+#          cpus: ${COREDNS_CPU_LIMIT:-1}
+#          memory: ${COREDNS_MEM_LIMIT:-1}G
+#          #pids: 1
+#        reservations:
+#          cpus: "0.1"
+#          memory: 128M
+
+  openwebui:
+    #build: #to test dns
+    #  dockerfile_inline: |
+    #    FROM ghcr.io/open-webui/open-webui:main
+    #    RUN apt-get update && apt-get install -y dnsutils
+    #  # docker exec -it openwebui bash  #test inside: dig 10.1.1.11 a ollama.com
+    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_DOCKER_TAG:-main}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 8080
+    #dns:
+    #  - 10.1.1.11
+    volumes:
+      - type: bind
+        source: ./openwebui_fs/data
+        target: /app/backend/data
+        read_only: false
+    depends_on:
+      - libretranslate
+      - ollamaweb
+      - vllm
+      #- automatic1111
+      - comfyui
+      - openedaispeech
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      #RESET_CONFIG_ON_START: True
+      OFFLINE_MODE: True
+      OLLAMA_BASE_URL: http://ollamaweb:11434
+      USE_OLLAMA_DOCKER: False
+      DEFAULT_MODELS: ${OLLAMAWEB_DEFAULT_MODEL:-qwen2.5:0.5b}
+      BYPASS_MODEL_ACCESS_CONTROL: True
+      ENABLE_EVALUATION_ARENA_MODELS: False
+      ENABLE_OPENAI_API: True
+      OPENAI_API_BASE_URL: http://vllm:8000/v1
+      OPENAI_API_KEY: ${VLLM_API_KEY:-sk-124781258123}
+      AUDIO_TTS_ENGINE: openai
+      AUDIO_TTS_OPENAI_API_BASE_URL: http://openedaispeech:8000/v1
+      AUDIO_TTS_OPENAI_API_KEY: ${OPENEDAISPEECH_API_KEY:-sk-111111111}
+      AUDIO_TTS_MODEL: tts-1
+      AUDIO_TTS_VOICE: ${OPENEDAISPEECH_DEFAULT_VOICE:-en_GB-alba-medium}
+      WHISPER_MODEL: ${OPENWEBUI_WHISPER_MODEL:-Systran/faster-whisper-base}
+      WHISPER_MODEL_AUTO_UPDATE: False
+      RAG_EMBEDDING_MODEL: ${OPENWEBUI_RAG_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      RAG_EMBEDDING_MODEL_AUTO_UPDATE: False
+      RAG_RERANKING_MODEL_AUTO_UPDATE: False
+      ENABLE_SIGNUP: True
+      DEFAULT_USER_ROLE: user
+      #USE_CUDA_DOCKER: True
+      #AUTOMATIC1111_BASE_URL: http://automatic1111:7860
+      COMFYUI_BASE_URL: http://comfyui:8188
+      # to get workflow definitions: change nginx.conf to access comfyui -> browse workflow templates -> export (API)
+      COMFYUI_WORKFLOW: ${COMFYUI_WORKFLOW:?error}
+      ENABLE_IMAGE_GENERATION: True
+      IMAGE_GENERATION_ENGINE: comfyui #automatic1111
+      IMAGE_GENERATION_MODEL: ${COMFYUI_WORKFLOW_MODEL:?error} #v1-5-pruned-emaonly-fp16.safetensors v2-1_768-ema-pruned.ckpt
+      IMAGE_SIZE: 512x512
+      IMAGE_STEPS: 20 #45
+      ENABLE_RAG_WEB_SEARCH: False
+      #RAG_WEB_SEARCH_ENGINE: brave
+      #BRAVE_SEARCH_API_KEY: YOUR_API_KEY
+      #RAG_WEB_SEARCH_RESULT_COUNT: 3
+      #RAG_WEB_SEARCH_CONCURRENT_REQUESTS: 10
+      #ENABLE_LDAP:
+      #ENABLE_RAG_WEB_SEARCH: True
+      #RAG_WEB_SEARCH_ENGINE: "searxng"
+      #RAG_WEB_SEARCH_RESULT_COUNT: 3
+      #RAG_WEB_SEARCH_CONCURRENT_REQUESTS: 10
+      #SEARXNG_QUERY_URL: "https://rbs-search.riken.jp/search?condition=Contents&searchCondition=AND&sort=new&start=0&exactMatch=false&synonym=true&fileSize=unselect&lastModified=unselect&word=<query>"
+    deploy:
+      mode: replicated
+      replicas: 1 #${OPENWEBUI_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${OPENWEBUI_CPU_LIMIT:-1}
+          memory: ${OPENWEBUI_MEM_LIMIT:-1}G
+          #pids: 1
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  openwebui-dl:
+    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_DOCKER_TAG:-main}
+    networks:
+      genai-public-net: {}
+    profiles: [dl]
+    entrypoint: bash /app/dl.sh
+    volumes:
+      - type: bind
+        source: ./openwebui_fs/download_models.sh
+        target: /app/dl.sh
+        read_only: true
+      - type: bind
+        source: ./openwebui_fs/data/cache
+        target: /app/backend/data/cache
+        read_only: false
+    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+    restart: no
+    pull_policy: missing
+
+  libretranslate:
+    image: libretranslate/libretranslate:${LIBRETRANSLATE_DOCKER_TAG:-latest}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 5000
+    volumes:
+      - type: bind
+        source: ./models/libretranslate
+        target: /home/libretranslate/.local
+        read_only: true
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    pull_policy: always
+    #env_file:
+    #  - stack.env
+    environment:
+      LT_FRONTEND_LANGUAGE_SOURCE: ja
+      LT_FRONTEND_LANGUAGE_TARGET: en
+      LT_DEBUG: false
+      LT_UPDATE_MODELS: false
+      LT_SSL: false
+      LT_SUGGESTIONS: false
+      LT_METRICS: false
+      LT_API_KEYS: false
+      LT_FRONTEND_TIMEOUT: 2000
+    deploy:
+      mode: replicated
+      replicas: ${LIBRETRANSLATE_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${LIBRETRANSLATE_CPU_LIMIT:-1}
+          memory: ${LIBRETRANSLATE_MEM_LIMIT:-1}G
+          #pids: 1
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    healthcheck:
+      test: ['CMD-SHELL', './venv/bin/python scripts/healthcheck.py']
+
+  libretranslate-dl:
+    image: libretranslate/libretranslate:${LIBRETRANSLATE_DOCKER_TAG:-latest}
+    networks:
+      genai-public-net: {}
+    profiles: [dl]
+    entrypoint: bash /app/dl.sh ${LIBRETRANSLATE_LANG_SUPPORT:-en,ja}
+    volumes:
+      - type: bind
+        source: ./libretranslate_fs/download_models.sh
+        target: /app/dl.sh
+        read_only: true
+      - type: bind
+        source: ./models/libretranslate
+        target: /home/libretranslate/.local
+        read_only: false
+    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+    restart: no
+    pull_policy: missing
+
+  ollamaweb:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG:-latest}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 11434
+    volumes:
+      - type: bind
+        source: ./ollama_fs
+        target: /root/.ollama
+        read_only: false
+      - type: bind
+        source: ./models/ollama/models
+        target: /models
+        read_only: true
+      - type: bind
+        source: ./models/ollama/gguf
+        target: /gguf
+        read_only: true
+    tty: ${OLLAMAWEB_TTY:-false}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      ## from ollama/envconfig/config.go
+      OLLAMA_MODELS: /models
+      OLLAMA_FLASH_ATTENTION: 1
+      #OLLAMA_KV_CACHE_TYPE: q8_0
+      #OLLAMA_MAX_LOADED_MODELS:
+      #OLLAMA_NUM_PARALLEL:
+      #OLLAMA_MAX_QUEUE:
+    deploy:
+      mode: replicated
+      replicas: ${OLLAMAWEB_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${OLLAMAWEB_CPU_LIMIT:-4}
+          memory: ${OLLAMAWEB_MEM_LIMIT:-4}G
+          #pids: 1
+        reservations:
+          cpus: "1"
+          memory: 1G
+          #devices:
+          #  - capabilities: ["nvidia-compute"]
+          #    driver: nvidia
+          #    count: 0
+
+  ollamacli:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG:-latest}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 11434
+    volumes:
+      - type: bind
+        source: ./ollama_fs
+        target: /root/.ollama
+        read_only: false
+      - type: bind
+        source: ./models/ollama/models
+        target: /models
+        read_only: true
+      - type: bind
+        source: ./models/ollama/gguf
+        target: /gguf
+        read_only: true
+    tty: ${OLLAMAWEB_TTY:-false}
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      ## from ollama/envconfig/config.go
+      OLLAMA_MODELS: /models
+      OLLAMA_FLASH_ATTENTION: 1
+      #OLLAMA_KV_CACHE_TYPE: q8_0
+      #OLLAMA_MAX_LOADED_MODELS:
+      #OLLAMA_NUM_PARALLEL:
+      #OLLAMA_MAX_QUEUE:
+    deploy:
+      mode: replicated
+      replicas: ${OLLAMACLI_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${OLLAMACLI_CPU_LIMIT:-4}
+          memory: ${OLLAMACLI_MEM_LIMIT:-4}G
+          #pids: 1
+        reservations:
+          cpus: "1"
+          memory: 1G
+          #devices:
+          #  - capabilities: ["nvidia-compute"]
+          #    driver: nvidia
+          #    count: 0
+
+  ollama-dl:
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG:-latest}
+    networks:
+      genai-public-net: {}
+    profiles: [dl]
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /bin/ollama serve &
+        sleep 5
+        bash /root/dl.sh ${OLLAMAWEB_DEFAULT_MODEL:-qwen2.5:0.5b}
+        bash /root/dl.sh ${OLLAMACLI_DEFAULT_MODEL:-qwen2.5-coder:0.5b}
+        pkill --signal SIGINT ollama
+    volumes:
+      - type: bind
+        source: ./ollama_fs/download_models.sh
+        target: /root/dl.sh
+        read_only: true
+      - type: bind
+        source: ./models/ollama/models
+        target: /models
+        read_only: false
+    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+    restart: no
+    pull_policy: missing
+    environment:
+      OLLAMA_MODELS: /models
+
+  vllm:
+    #image: vllm/vllm-openai:${VLLM_DOCKER_TAG:-latest}
+    #image: public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:${VLLM_DOCKER_TAG:-v0.7.2}
+    build:
+      context: ./vllm_fs
+      dockerfile: Dockerfile.${VLLM_ARCH:-cpu}
+      args:
+        VLLM_ARCH: ${VLLM_ARCH:-cpu}
+        VLLM_VERS: ${VLLM_VERS:-v0.7.2}
+        VLLM_CPU_DISABLE_AVX512: ${VLLM_CPU_DISABLE_AVX512:-0}
+        VLLM_CPU_AVX512BF16: ${VLLM_CPU_AVX512BF16:-0}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 8000
+    volumes:
+      - type: bind
+        source: ./models/vllm/huggingface
+        target: /root/.cache/huggingface
+        read_only: true
+    restart: unless-stopped
+    pull_policy: never
+    # https://docs.vllm.ai/en/latest/serving/engine_args.html#engine-args
+    command: --api-key ${VLLM_API_KEY:-sk-124781258123} --model ${VLLM_MODEL:-facebook/opt-125m} -tp ${VLLM_TENSOR_PARALLEL:-1} -pp ${VLLM_PIPELINE_PARALLEL:-1}
+    #--device ${VLLM_ARCH:-cpu} --disable-frontend-multiprocessing
+    environment:
+      TRANSFORMERS_OFFLINE: 1
+      HF_HUB_OFFLINE: 1
+      VLLM_NO_USAGE_STATS: 1
+      VLLM_API_KEY: ${VLLM_API_KEY:-sk-124781258123}
+      VLLM_CPU_KVCACHE_SPACE: ${VLLM_CPU_KVCACHE_SPACE:-8}
+      #VLLM_LOGGING_LEVEL: DEBUG
+      #LLM_TRACE_FUNCTION: 1
+    deploy:
+      mode: replicated
+      replicas: ${VLLM_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${VLLM_CPU_LIMIT:-4}
+          memory: ${VLLM_MEM_LIMIT:-4}G
+          #pids: 1
+        reservations:
+          cpus: "1"
+          memory: 1G
+          #devices:
+          #  - capabilities: ["nvidia-compute"]
+          #    driver: nvidia
+          #    count: 0
+
+  vllm-dl:
+    #image: vllm/vllm-openai:${VLLM_DOCKER_TAG:-latest}
+    #image: public.ecr.aws/q9t5s3a7/vllm-cpu-release-repo:${VLLM_DOCKER_TAG:-v0.7.2}
+    build:
+      context: ./vllm_fs
+      dockerfile: Dockerfile.cpu
+      args:
+        VLLM_ARCH: cpu
+        VLLM_VERS: ${VLLM_VERS:-v0.7.2}
+        VLLM_CPU_DISABLE_AVX512: ${VLLM_CPU_DISABLE_AVX512:-0}
+        VLLM_CPU_AVX512BF16: ${VLLM_CPU_AVX512BF16:-0}
+    networks:
+      genai-public-net: {}
+    profiles: [dl]
+    entrypoint: bash /root/dl.sh ${VLLM_MODEL:-facebook/opt-125m}
+    volumes:
+      - type: bind
+        source: ./vllm_fs/download_models.sh
+        target: /root/dl.sh
+        read_only: true
+      - type: bind
+        source: ./models/vllm/huggingface
+        target: /root/.cache/huggingface
+        read_only: false
+    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+    restart: no
+    pull_policy: never
+    environment:
+      VLLM_NO_USAGE_STATS: 1
+
+#  automatic1111:
+#    image: ghcr.io/neggles/sd-webui-docker:${A1111_DOCKER_TAG:-latest}
+#    networks:
+#      genai-private-net: {}
+#    expose:
+#      - 7860
+#    volumes:
+#      - type: bind
+#        source: ./a1111_fs
+#        target: /data
+#        read_only: false
+#      - type: bind
+#        source: ./models/a1111/ckpt
+#        target: /ckpt
+#        read_only: true
+#    restart: unless-stopped
+#    pull_policy: always
+#    environment:
+#      COMMANDLINE_ARGS: "--api --nowebui --use-cpu all --precision full --no-half --skip-torch-cuda-test --data-dir /data --ckpt-dir /ckpt --no-download-sd-model --do-not-download-clip --disable-nan-check --disable-opt-split-attention"
+#      PYTHONUNBUFFERED: 1
+#      TERM: vt100
+#      SD_WEBUI_VARIANT: default
+#    deploy:
+#      mode: replicated
+#      replicas: ${A1111_REPLICAS:-1}
+#      endpoint_mode: vip
+#      resources:
+#        limits:
+#          cpus: ${A1111_CPU_LIMIT:-4}
+#          memory: ${A1111_MEM_LIMIT:-4}G
+#          #pids: 1
+#        reservations:
+#          cpus: "1"
+#          memory: 1G
+#          #devices:
+#          #  - capabilities: ["nvidia-compute"]
+#          #    driver: nvidia
+#          #    count: 0
+#
+#  automatic1111-dl:
+#    image: ghcr.io/neggles/sd-webui-docker:${A1111_DOCKER_TAG:-latest}
+#    build:
+#      context: ./sd-webui-docker/docker
+#      dockerfile: Dockerfile.base
+#      genai-public-net: {}
+#    ports:
+#      - 7860/tcp
+#    profiles: [dl]
+#    volumes:
+#      - type: bind
+#        source: ./models/a1111/ckpt
+#        target: /ckpt
+#        read_only: false
+#    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+#    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+#    restart: no
+#    pull_policy: missing
+#    environment:
+#      COMMANDLINE_ARGS: "--skip-version-check --allow-code --enable-insecure-extension-access --api --xformers --use-cpu all --precision full --no-half --skip-torch-cuda-test --ckpt-dir /ckpt"
+#      PYTHONUNBUFFERED: 1
+#      TERM: vt100
+#      SD_WEBUI_VARIANT: "default"
+
+  comfyui:
+    build:
+      context: ./comfyui_fs
+      dockerfile: Dockerfile
+      args:
+        COMFYUI_ARCH: ${COMFYUI_ARCH:-cpu}
+        COMFYUI_VERS: ${COMFYUI_VERS:-v0.3.14}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 8188
+    volumes:
+      - type: bind
+        source: ./comfyui_fs/user
+        target: /app/comfyui/user
+        read_only: false
+      - type: bind
+        source: ./comfyui_fs/extra_model_paths.yaml
+        target: /app/comfyui/emp.yaml
+        read_only: true
+      - type: bind
+        source: ./models/comfyui
+        target: /models
+        read_only: true
+    restart: no
+    pull_policy: never
+    environment:
+      #from https://github.com/comfyanonymous/ComfyUI/blob/v0.3.14/comfy/cli_args.py
+      COMMANDLINE_ARGS: "--cpu --cpu-vae"
+    deploy:
+      mode: replicated
+      replicas: ${COMFYUI_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${COMFYUI_CPU_LIMIT:-4}
+          memory: ${COMFYUI_MEM_LIMIT:-4}G
+          #pids: 1
+        reservations:
+          cpus: "1"
+          memory: 1G
+          #devices:
+          #  - capabilities: ["nvidia-compute"]
+          #    driver: nvidia
+          #    count: 0
+
+  comfyui-dl:
+    build:
+      context: ./comfyui_fs
+      dockerfile: Dockerfile
+      args:
+        COMFYUI_ARCH: ${COMFYUI_ARCH:-cpu}
+        COMFYUI_VERS: ${COMFYUI_VERS:-v0.3.14}
+    networks:
+      genai-public-net: {}
+    profiles: [dl]
+    entrypoint: bash /app/comfyui/dl.sh
+    volumes:
+      - type: bind
+        source: ./comfyui_fs
+        target: /app/comfyui/user
+        read_only: false
+      - type: bind
+        source: ./comfyui_fs/download_models.sh
+        target: /app/comfyui/dl.sh
+        read_only: true
+      - type: bind
+        source: ./models/comfyui
+        target: /models
+        read_only: false
+    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+    restart: no
+    pull_policy: never
+
+  openedaispeech:
+    image: ghcr.io/matatonic/openedai-speech:${OPENEDAISPEECH_DOCKER_TAG:-latest}
+    networks:
+      genai-private-net: {}
+    expose:
+      - 8000
+    volumes:
+      - type: bind
+        source: ./openedaispeech_fs
+        target: /app/config
+        read_only: false
+      - type: bind
+        source: ./models/openedaispeech
+        target: /app/voices
+        read_only: true
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      TTS_HOME: voices
+      HF_HOME: voices
+      #PRELOAD_MODEL: xtts
+      #EXTRA_ARGS: '--log-level DEBUG --unload-timer 300'
+      #USE_ROCM: 1
+    deploy:
+      mode: replicated
+      replicas: ${OPENEDAISPEECH_REPLICAS:-1}
+      endpoint_mode: vip
+      resources:
+        limits:
+          cpus: ${OPENEDAISPEECH_CPU_LIMIT:-4}
+          memory: ${OPENEDAISPEECH_MEM_LIMIT:-4}G
+          #pids: 1
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+  openedaispeech-dl:
+    image: ghcr.io/matatonic/openedai-speech:${OPENEDAISPEECH_DOCKER_TAG:-latest}
+    networks:
+      genai-public-net: {}
+    profiles: [dl]
+    entrypoint: bash /app/dl.sh ${OPENEDAISPEECH_DEFAULT_VOICE:-en_GB-alba-medium}
+    volumes:
+      - type: bind
+        source: ./openedaispeech_fs/download_models.sh
+        target: /app/dl.sh
+        read_only: true
+      - type: bind
+        source: ./openedaispeech_fs
+        target: /app/config
+        read_only: false
+      - type: bind
+        source: ./models/openedaispeech
+        target: /app/voices
+        read_only: false
+    cpu_count: ${DOWNLOAD_CPU_LIMIT:-2}
+    mem_limit: ${DOWNLOAD_MEM_LIMIT:-2}g
+    restart: no
+    pull_policy: missing
+    environment:
+      TTS_HOME: voices
+      HF_HOME: voices
+
+networks:
+  genai-public-net:
+    external: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
+  genai-private-net:
+    internal: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.69.0.0/23
+          gateway: 172.69.0.1

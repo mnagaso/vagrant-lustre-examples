@@ -297,7 +297,7 @@ SCRIPT
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
   config.vm.provider "virtualbox" do |v|
-    v.memory = 512
+    v.memory = 2048
     v.cpus = 2
   end
   config.vm.box = "bento/rockylinux-8"
@@ -350,9 +350,16 @@ Vagrant.configure("2") do |config|
   config.vm.define "login" do |login|
     login.vm.hostname = "login"
     login.vm.network "private_network", ip: "192.168.10.30"
-    # The following line maps guest port 3000 to host port 3000,
+    # Forward port 11080 from guest to host for OpenWebUI access
+    login.vm.network :forwarded_port, guest: 11080, host: 11080, auto_correct: true
+    # The following line maps guest port 3000 to host port 1234,
     # allowing external access to the Next.js server running on the VM.
     login.vm.network :forwarded_port, guest: 3000, host: 1234
+    # Set more resources for login node only
+    login.vm.provider "virtualbox" do |v|
+      v.memory = 8192
+      v.cpus = 8
+    end
     login.vm.provision "shell", name: "create_repo", inline: $create_repo
     login.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
     login.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
