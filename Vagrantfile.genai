@@ -1,0 +1,30 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+$install_docker = <<-SCRIPT
+sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+sudo dnf install -y docker-ce docker-ce-cli containerd.io
+sudo systemctl enable --now docker
+sudo usermod -aG docker vagrant
+SCRIPT
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "bento/rockylinux-9"
+  config.vm.box_check_update = false
+  config.vm.provider :virtualbox
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 8192
+    v.cpus = 8
+  end
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  config.vm.define "genai-test" do |node|
+    node.vm.hostname = "genai-test"
+    node.vm.network "private_network", ip: "192.168.56.10"
+    node.vm.network :forwarded_port, guest: 3000, host: 3000, auto_correct: true
+    node.vm.network :forwarded_port, guest: 11080, host: 11080, auto_correct: true
+    node.vm.provision "shell", name: "install_docker", inline: $install_docker
+  end
+end
