@@ -296,21 +296,20 @@ SCRIPT
 
 Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
-  config.vm.provider "virtualbox" do |v|
-    v.memory = 2048
-    v.cpus = 2
-  end
   config.vm.box = "bento/rockylinux-8"
   config.vm.box_check_update = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.provision "shell", name: "check_kernel_version", inline: $check_kernel_version
-
   config.vm.provision "shell", name: "create_file_hosts", inline: $create_file_hosts
 
   config.vm.define "mxs" do |mxs|
     mxs.vm.hostname = "mxs"
     mxs.vm.network "private_network", ip: "192.168.10.10"
     mxs.vm.disk :disk, size: "10GB", name: "disk_for_lustre"
+    mxs.vm.provider "virtualbox" do |v|
+      v.memory = 2048
+      v.cpus = 2
+    end
     mxs.vm.provision "shell", name: "create_repo", inline: $create_repo
     mxs.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
     mxs.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
@@ -331,6 +330,10 @@ Vagrant.configure("2") do |config|
     oss.vm.network "private_network", ip: "192.168.10.20"
     oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_1"
     oss.vm.disk :disk, size: "10GB", name: "disk_for_lustre_ost_2"
+    oss.vm.provider "virtualbox" do |v|
+      v.memory = 2048
+      v.cpus = 2
+    end
     oss.vm.provision "shell", name: "create_repo", inline: $create_repo
     oss.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
     oss.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
@@ -350,12 +353,8 @@ Vagrant.configure("2") do |config|
   config.vm.define "login" do |login|
     login.vm.hostname = "login"
     login.vm.network "private_network", ip: "192.168.10.30"
-    # Forward port 11080 from guest to host for OpenWebUI access
     login.vm.network :forwarded_port, guest: 11080, host: 11080, auto_correct: true
-    # The following line maps guest port 3000 to host port 1234,
-    # allowing external access to the Next.js server running on the VM.
     login.vm.network :forwarded_port, guest: 3000, host: 1234
-    # Set more resources for login node only
     login.vm.provider "virtualbox" do |v|
       v.memory = 8192
       v.cpus = 8
@@ -380,6 +379,10 @@ Vagrant.configure("2") do |config|
   config.vm.define "compute1" do |compute1|
     compute1.vm.hostname = "compute1"
     compute1.vm.network "private_network", ip: "192.168.10.40"
+    compute1.vm.provider "virtualbox" do |v|
+      v.memory = 2048
+      v.cpus = 2
+    end
     compute1.vm.provision "shell", name: "create_repo", inline: $create_repo
     compute1.vm.provision "shell", name: "install_packages_common", inline: $install_packages_common
     compute1.vm.provision "shell", name: "install_packages_kernel_patched", inline: $install_packages_kernel_patched
