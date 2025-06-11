@@ -14,6 +14,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "bento/rockylinux-9"
   config.vm.box_check_update = false
   config.vm.provider :virtualbox
+  config.disksize.size = '100GB'
   config.vm.provider "virtualbox" do |v|
     v.memory = 8192
     v.cpus = 8
