@@ -9,9 +9,13 @@ mkdir -p models/libretranslate
 sudo chown 1032:1032 models/libretranslate
 
 # Configure Docker daemon
-cat <<EOF | sudo tee /etc/docker/daemon.json
+if [[ "$(uname)" == "Darwin" ]]; then
+  echo "macOS detected: Skipping Docker daemon configuration (not needed for Docker Desktop)."
+else
+  cat <<EOF | sudo tee /etc/docker/daemon.json
 { "data-root": "$HOME/.docker/lib/docker", "exec-root": "$HOME/.docker/run/docker" }
 EOF
+fi
 
 # Try to restart Docker service if it exists
 if systemctl list-units --type=service | grep -qE 'docker(\.service)?'; then
