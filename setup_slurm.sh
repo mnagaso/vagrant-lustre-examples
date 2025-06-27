@@ -17,7 +17,7 @@ if [ ! -f "./munge.key" ]; then
 fi
 
 # Define nodes
-NODES=("mxs" "oss" "login" "compute1")
+NODES=("mxs" "oss" "login" "compute1" "ood")
 
 # Copy configuration script to all nodes
 echo "Copying configuration script to all nodes..."
