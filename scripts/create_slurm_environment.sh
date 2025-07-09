@@ -4,9 +4,8 @@
 echo "==== Creating SLURM environment ===="
 
 # Create required users
-echo "Creating munge and slurm users..."
+echo "Creating munge user..."
 id -u munge &>/dev/null || useradd -r -m munge
-id -u slurm &>/dev/null || useradd -r -m slurm
 
 # Create required directories
 echo "Creating SLURM directories..."
@@ -26,9 +25,9 @@ echo "Setting directory permissions..."
 chown root:root /var/spool/slurmd
 chmod 755 /var/spool/slurmd
 
-chown slurm:slurm /var/spool/slurmctld
-chown slurm:slurm /var/log/slurm
-chown slurm:slurm /var/run/slurm
+chown root:root /var/spool/slurmctld
+chown root:root /var/log/slurm
+chown root:root /var/run/slurm
 chmod 755 /var/spool/slurmctld
 chmod 755 /var/log/slurm
 chmod 755 /var/run/slurm

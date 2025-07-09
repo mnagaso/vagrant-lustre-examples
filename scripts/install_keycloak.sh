@@ -1,8 +1,5 @@
 #!/bin/bash
-# Install Keycloak latest version (25.x) usin    -e KC_HOSTNAME=192.168.10.60 \
-    -e KC_HOSTNAME_STRICT=false \
-    -e KC_HTTP_ENABLED=true \
-    -e KC_PROXY=edge \ntainer image
+# Install Keycloak latest version (25.x) using Container image
 # Updated for 2025 - using official Keycloak container with Podman for better security
 
 echo "==== Installing Keycloak (25.x) using Container Image ===="

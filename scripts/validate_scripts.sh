@@ -1,4 +1,12 @@
 #!/bin/bash
+# =============================================================================
+# Script Validation Utility
+# =============================================================================
+# PURPOSE: Validates that all required scripts exist and have proper syntax
+# USAGE: Run manually to check script integrity before deployment
+# STATUS: Utility script - not used by Vagrantfile
+# =============================================================================
+
 # Validate that all required scripts exist
 
 SCRIPT_DIR="$(dirname "$0")"

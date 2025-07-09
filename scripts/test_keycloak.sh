@@ -1,5 +1,11 @@
 #!/bin/bash
-# Test script to diagnose Keycloak startup issues
+# =============================================================================
+# Keycloak Testing and Diagnostic Script
+# =============================================================================
+# PURPOSE: Manual testing and troubleshooting utility for Keycloak installation
+# USAGE: Run manually after Keycloak installation to verify functionality
+# STATUS: Utility script - not used by Vagrantfile
+# =============================================================================
 
 echo "==== Keycloak Diagnostic Script ===="
 

@@ -1,3 +1,25 @@
+#!/bin/bash
+# =============================================================================
+# Cluster Configuration File
+# =============================================================================
+# This file centralizes all user account settings and configuration for the
+# Lustre cluster. It can be sourced by other scripts to maintain consistency
+# across the cluster setup.
+#
+# USAGE:
+#   source scripts/cluster_config.sh
+#   load_cluster_config
+#
+# PURPOSE:
+#   - Provides centralized configuration for cluster users
+#   - Maintains consistent settings across all nodes
+#   - Can be used by administration scripts for user management
+#   - Contains network configuration for cluster services
+#
+# STATUS: Currently not used by Vagrantfile but available for manual
+#         administration and future integration
+# =============================================================================
+
 # Cluster User Configuration
 # This file centralizes all user account settings for the Lustre cluster
 

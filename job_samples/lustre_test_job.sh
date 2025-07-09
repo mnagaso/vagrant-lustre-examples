@@ -1,13 +1,14 @@
 #!/bin/bash
 #SBATCH --job-name=lustre_test_job
-#SBATCH --output=lustre_test_job.out
-#SBATCH --error=lustre_test_job.err
+#SBATCH --output=lustre_test_job_%j.out
+#SBATCH --error=lustre_test_job_%j.err
 #SBATCH --ntasks=1
 #SBATCH --time=00:10:00
 
 # Define Lustre mount point and test file name
 LUSTRE_MOUNT="/lustre"
-TEST_FILE="${LUSTRE_MOUNT}/lustre_test_$(date +%s).bin"
+USER_NAME=$(whoami)
+TEST_FILE="${LUSTRE_MOUNT}/${USER_NAME}/lustre_test_$(date +%s).bin"
 
 # data size to be written in MB
 DATA_SIZE_MB=1024

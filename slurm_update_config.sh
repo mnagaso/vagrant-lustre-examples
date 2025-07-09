@@ -31,14 +31,14 @@ munge -n | unmunge || {
 }
 
 # Configure SLURM based on node role
-if [ "$HOSTNAME" = "mxs" ]; then
+if [ "$HOSTNAME" = "login" ]; then
     echo "Configuring SLURM controller..."
     systemctl stop slurmctld > /dev/null 2>&1
 
     # Ensure essential directories exist with correct permissions
     # These should already be created by Vagrantfile, but double-check critical ones
     mkdir -p /var/spool/slurmctld/state
-    chown slurm:slurm /var/spool/slurmctld/state
+    chown root:root /var/spool/slurmctld/state
     chmod 755 /var/spool/slurmctld/state
 
     # Ensure proper permissions are set
@@ -56,7 +56,7 @@ else
 
     # Ensure spool directory exists with proper permissions
     mkdir -p /var/spool/slurmd
-    chown slurm:slurm /var/spool/slurmd
+    chown root:root /var/spool/slurmd
     chmod 755 /var/spool/slurmd
 
     # Start slurmd

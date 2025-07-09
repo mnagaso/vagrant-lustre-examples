@@ -8,15 +8,19 @@ Vagrant.configure("2") do |config|
   config.vm.provider :virtualbox
   config.vm.provider "virtualbox" do |v|
     v.memory = 4096
-    v.cpus = 8
+    v.cpus = 4
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
   end
   config.vm.box = "bento/rockylinux-8"
   config.vm.box_check_update = false
   config.vm.synced_folder ".", "/vagrant", disabled: true
   config.vm.provision "shell", name: "check_kernel_version", path: "scripts/check_kernel_version.sh"
-
   config.vm.provision "shell", name: "create_file_hosts", path: "scripts/create_file_hosts.sh"
+
+  # File provisioner for Slurm configuration files (run on demand)
+  #config.vm.provision "file", source: "slurm_update_config.sh", destination: "/home/vagrant/slurm_update_config.sh", run: "never"
+  #config.vm.provision "file", source: "slurm.conf", destination: "/home/vagrant/slurm.conf", run: "never"
+  #config.vm.provision "file", source: "munge.key", destination: "/home/vagrant/munge.key", run: "never"
 
   config.vm.define "mxs" do |mxs|
     mxs.vm.hostname = "mxs"
@@ -33,8 +37,9 @@ Vagrant.configure("2") do |config|
     mxs.vm.provision "shell", name: "configure_lnet", path: "scripts/configure_lnet.sh"
     mxs.vm.provision "shell", name: "configure_mgs_mds", path: "scripts/configure_lustre_server_mgs_mds.sh"
     mxs.vm.provision "shell", name: "start_lustre_server", path: "scripts/start_lustre_server.sh"
-    mxs.vm.provision "shell", name: "install_slurm_basic", path: "scripts/install_slurm_basic.sh"
-    mxs.vm.provision "shell", name: "create_slurm_environment", path: "scripts/create_slurm_environment.sh"
+    #mxs.vm.provision "shell", name: "install_slurm_basic", path: "scripts/install_slurm_basic.sh"
+    #mxs.vm.provision "shell", name: "create_slurm_environment", path: "scripts/create_slurm_environment.sh"
+    #mxs.vm.provision "shell", name: "create_cluster_users", path: "scripts/create_cluster_users.sh"
   end
 
   config.vm.define "oss" do |oss|
@@ -53,8 +58,9 @@ Vagrant.configure("2") do |config|
     oss.vm.provision "shell", name: "configure_lnet", path: "scripts/configure_lnet.sh"
     oss.vm.provision "shell", name: "configure_oss", path: "scripts/configure_lustre_server_oss_zfs.sh"
     oss.vm.provision "shell", name: "start_lustre_server", path: "scripts/start_lustre_server.sh"
-    oss.vm.provision "shell", name: "install_slurm_basic", path: "scripts/install_slurm_basic.sh"
-    oss.vm.provision "shell", name: "create_slurm_environment", path: "scripts/create_slurm_environment.sh"
+    #oss.vm.provision "shell", name: "install_slurm_basic", path: "scripts/install_slurm_basic.sh"
+    #oss.vm.provision "shell", name: "create_slurm_environment", path: "scripts/create_slurm_environment.sh"
+    #oss.vm.provision "shell", name: "create_cluster_users", path: "scripts/create_cluster_users.sh"
   end
 
   # Renamed from "client" to "login" to serve as login node
@@ -73,11 +79,18 @@ Vagrant.configure("2") do |config|
     login.vm.provision "shell", name: "create_cluster_users", path: "scripts/create_cluster_users.sh"
     login.vm.provision "shell", name: "create_user_dirs", path: "scripts/create_user_dirs.sh"
     login.vm.provision "shell", name: "create_job_script", path: "scripts/create_job_script.sh"
+    # sharing home directories make a duplication of .ssh/authorized_keys which is required from vagrant ssh
+    # to work properly (independent key for each vm is required), so we disable it for now
+    #login.vm.provision "shell", name: "configure_shared_home_nfs", path: "scripts/configure_shared_home_nfs.sh"
     login.vm.provision "shell", name: "configure_ssh_for_ood", path: "scripts/configure_ssh_for_ood.sh"
   end
 
   # Add a dedicated compute node
   config.vm.define "compute1" do |compute1|
+    #compute1.vm.provider "virtualbox" do |v|
+    #  v.memory = 4096
+    #  v.cpus = 4
+    #end
     compute1.vm.hostname = "compute1"
     compute1.vm.network "private_network", ip: "192.168.10.40"
     compute1.vm.provision "shell", name: "create_repo", path: "scripts/create_repo.sh"
@@ -88,7 +101,13 @@ Vagrant.configure("2") do |config|
     compute1.vm.provision "shell", name: "install_slurm_basic", path: "scripts/install_slurm_basic.sh"
     compute1.vm.provision "shell", name: "create_slurm_environment", path: "scripts/create_slurm_environment.sh"
     compute1.vm.provision "shell", name: "create_cluster_users", path: "scripts/create_cluster_users.sh"
+    compute1.vm.provision "shell", name: "create_user_dirs", path: "scripts/create_user_dirs.sh"
+    # sharing home directories make a duplication of .ssh/authorized_keys which is required from vagrant ssh
+    # to work properly (independent key for each vm is required), so we disable it for now
+    #compute1.vm.provision "shell", name: "configure_shared_home_nfs", path: "scripts/configure_shared_home_nfs.sh"
     compute1.vm.provision "shell", name: "configure_ssh_for_ood", path: "scripts/configure_ssh_for_ood.sh"
+    compute1.vm.provision "shell", name: "install_singularity", path: "scripts/install_singularity.sh"
+    compute1.vm.provision "shell", name: "distribute_container", path: "scripts/distribute_container.sh"
   end
 
   # Add a Keycloak VM for OIDC authentication (must come before OOD)
@@ -125,43 +144,10 @@ Vagrant.configure("2") do |config|
     ood.vm.provision "shell", name: "install_open_ondemand", path: "scripts/install_open_ondemand.sh"
     ood.vm.provision "shell", name: "configure_open_ondemand", path: "scripts/configure_open_ondemand.sh"
     ood.vm.provision "shell", name: "create_cluster_users", path: "scripts/create_cluster_users.sh"
+    ood.vm.provision "shell", name: "create_user_dirs", path: "scripts/create_user_dirs.sh"
+    # sharing home directories make a duplication of .ssh/authorized_keys which is required from vagrant ssh
+    # to work properly (independent key for each vm is required), so we disable it for now
+    #ood.vm.provision "shell", name: "configure_shared_home_nfs", path: "scripts/configure_shared_home_nfs.sh"
   end
 end
 
-# KEYCLOAK + OPEN ONDEMAND INTEGRATION SUMMARY:
-#
-# The Vagrantfile now uses external scripts from the scripts/ directory for better organization.
-# All inline scripts have been moved to separate .sh files for easier maintenance and reusability.
-#
-# 1. Keycloak VM (192.168.10.60):
-#    - Installs Keycloak 25.x using official container image with Podman
-#    - Uses systemd service for container management and auto-restart
-#    - Configured for development mode with HTTP access on port 8080
-#    - Creates "ood" realm with OIDC client configuration
-#    - Creates test users (testuser, admin with password123/admin123)
-#    - Accessible at http://192.168.10.60:8080 (admin console: /admin)
-#    - Accessible from host at http://localhost:8080
-#
-# 2. Open OnDemand VM (192.168.10.50):
-#    - Installs Open OnDemand with mod_auth_openidc
-#    - Uses ood-portal-generator for proper configuration
-#    - Configured for OIDC authentication with Keycloak 25.x
-#    - Uses correct Keycloak OIDC metadata endpoint
-#    - Accessible at https://192.168.10.50
-#    - Accessible from host at https://localhost:8444
-#
-# 3. Automated OIDC Configuration:
-#    - Creates 'ood' realm in Keycloak with proper settings
-#    - Creates OIDC client with ID 'ood-test'
-#    - Creates users user1-user5 with password123
-#    - Updates OOD configuration with Keycloak provider URL
-#    - Integration script runs automatically during provisioning
-#
-# 4. Network Configuration:
-#    - Keycloak: 192.168.10.60:8080 → localhost:8080
-#    - Open OnDemand: 192.168.10.50:443 → localhost:8444
-#    - Cross-VM communication for OIDC authentication
-#
-# The entire setup is now fully automated using modern Keycloak 25.x with container deployment.
-# Just run 'vagrant up' and both Keycloak and Open OnDemand will be configured and ready to use!
-#
